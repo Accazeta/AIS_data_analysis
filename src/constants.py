@@ -1,6 +1,6 @@
 from enum import Enum
 
-ROOT_FOLDER_PATH = "/home/accazeta/Scrivania/Unibg/ZTesi Magistrale/aisdk-2006-04/"
+ROOT_FOLDER_PATH = "/home/accazeta/Scrivania/Unibg/ZTesi Magistrale/"
 
 # https://en.wikipedia.org/wiki/Automatic_identification_system
 class CsvColumns(Enum):
@@ -36,7 +36,7 @@ class CsvColumns(Enum):
     
     ROT = 6
     '''Rate of turn from AIS message if available. (=Tasso di variazione rotta)
-        Can be right or left, with accepted values (float) ranging from 0 to 720 (deg/min)'''
+        Can be right or left, with accepted values (float) ranging from 0 to +/-720 (deg/min)'''
     
     SOG = 7
     '''Speed over ground from AIS message if available
