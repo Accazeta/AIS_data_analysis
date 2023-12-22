@@ -191,3 +191,8 @@ csv/aisdk-2006-04/aisdk_20060428.csv
 csv/aisdk-2006-04/aisdk_20060429.csv
 output/output_file.txt
 csv/aisdk-2006-04/.~lock.aisdk_20060401.csv#
+csv/.~lock.aisdk-2023-04-01.csv#
+csv/test/aisdk_20060401.csv
+csv/test/aisdk_20060415.csv
+output/test/aisdk_20060401.txt
+output/test/aisdk_20060415.txt
