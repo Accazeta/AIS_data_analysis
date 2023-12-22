@@ -1,6 +1,9 @@
 from enum import Enum
 
-ROOT_FOLDER_PATH = "/home/accazeta/Scrivania/Unibg/ZTesi Magistrale/"
+ROOT_FOLDER_PATH = "/home/accazeta/Scrivania/Unibg/ZTesi Magistrale/workspace/AIS_data_analysis/csv"
+OUTPUTFILE = "output/output_file.txt"
+FILENAME1 = "aisdk-2006-04/aisdk_20060401.csv"
+FILENAME2 = "aisdk-2023-04-01.csv"
 
 # https://en.wikipedia.org/wiki/Automatic_identification_system
 class CsvColumns(Enum):

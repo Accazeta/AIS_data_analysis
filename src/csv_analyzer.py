@@ -34,17 +34,17 @@ def check_value_formality(valuesDict : dict, value : str, max : float) -> bool:
     '''Function used for the ROT, SOG, COG, Heading attributes in order to check if a value from the csv is null, valid or an error'''
     if value == "":
         valuesDict['nulls'] += 1
+        return True
     else:
         floatValue = float(value)
         if 0 <= abs(floatValue) <= max:
             valuesDict['stdvalues'] += 1
+            return True
         else:
             valuesDict['errors'] += 1
+            return False
 
 
-
-FILENAME1 = "aisdk-2006-04/aisdk_20060401.csv"
-FILENAME2 = "aisdk-2023-04-01.csv"
 typesDict = {}
 ROTdict =       {"stdvalues" : 0, "nulls" : 0, "errors" : 0}
 SOGdict =       {"stdvalues" : 0, "nulls" : 0, "errors" : 0}
@@ -53,14 +53,20 @@ HeadingDict =   {"stdvalues" : 0, "nulls" : 0, "errors" : 0}
 results = []
 
 # Quicky extract the number of attributes of the csv
-with open(c.ROOT_FOLDER_PATH + FILENAME1) as cf:
+with open(c.ROOT_FOLDER_PATH + c.FILENAME1) as cf:
      myReader = csv.reader(cf)
      row1 = next(myReader)
      attributesNames = [str(x) for x in row1]
      results = [0 for x in attributesNames]
 print(attributesNames)
 
-with open(c.ROOT_FOLDER_PATH + FILENAME1) as cf:
+with open(c.OUTPUTFILE, 'w') as f:
+    None 
+    # This is used to delete the output file in case it already exists
+    # If it doesn't exists, creates a new one
+    
+
+with open(c.ROOT_FOLDER_PATH + c.FILENAME1) as cf:
         myReader = csv.reader(cf)
         next(myReader) # skip the first row (with the names of the attributes)
 
@@ -86,13 +92,21 @@ with open(c.ROOT_FOLDER_PATH + FILENAME1) as cf:
                        if re.match('Unknown value', col):
                            results[index] += 1
                     case c.CsvColumns.ROT.value:
-                        check_value_formality(ROTdict, col, 720)
+                        if not(check_value_formality(ROTdict, col, 720)):
+                            with open(OUTPUTFILE, 'a') as file:
+                                file.write("ROT -> " + str(row[0:3]) + " "  + row[index] + "\n")
                     case c.CsvColumns.SOG.value:
-                        check_value_formality(SOGdict, col, 102)
+                        if not(check_value_formality(SOGdict, col, 102)):
+                            with open(OUTPUTFILE, 'a') as file:
+                                file.write("SOG -> " + str(row[0:3]) + " "  + row[index]+ "\n")
                     case c.CsvColumns.COG.value:
-                        check_value_formality(COGdict, col, 360)
+                        if not(check_value_formality(COGdict, col, 360)):
+                            with open(OUTPUTFILE, 'a') as file:
+                                file.write("COG -> " + str(row[0:3]) + " "  + row[index] + "\n")
                     case c.CsvColumns.Heading.value:
-                        check_value_formality(HeadingDict, col, 360)
+                        if not(check_value_formality(HeadingDict, col, 360)):
+                            with open(OUTPUTFILE, 'a') as file:
+                                file.write("Heading -> "+ str(row[0:3]) + " " + row[index] + "\n")
                         
 
         
