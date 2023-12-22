@@ -14,24 +14,25 @@ def is_valid_timestamp(date_to_check : str) -> bool:
 # TODO fix function
 def count_types_of_mobile(types : dict, current : str):
     '''Function that counts how many types of mobile are in the dataset. Automatically updates the dictionary if new types are found'''
-    if current not in types.values():
+    if current not in types.keys():
         types[current] = 1
     else:
          types[current] += 1
 
 
-FILE_NAME = "aisdk_20060401.csv"
+FILENAME1 = "aisdk-2006-04/aisdk_20060401.csv"
+FILENAME2 = "aisdk-2023-04-01.csv"
 typesDict = {}
 
 # Quicky extract the number of attributes of the csv
-with open(c.ROOT_FOLDER_PATH + FILE_NAME) as cf:
+with open(c.ROOT_FOLDER_PATH + FILENAME1) as cf:
      myReader = csv.reader(cf)
      row1 = next(myReader)
      attributesNames = [str(x) for x in row1]
      results = [0 for x in attributesNames]
 print(attributesNames)
 
-with open(c.ROOT_FOLDER_PATH + FILE_NAME) as cf:
+with open(c.ROOT_FOLDER_PATH + FILENAME1) as cf:
         myReader = csv.reader(cf)
         next(myReader) # skip the first row (with the names of the attributes)
 
@@ -42,7 +43,7 @@ with open(c.ROOT_FOLDER_PATH + FILE_NAME) as cf:
                         if not(is_valid_timestamp(col)):
                             results[index] += 1
                     case c.CsvColumns.Type_of_mobile.value:
-                          typesDict.count_types_of_mobile(col)
+                          count_types_of_mobile(typesDict, col)
 
 print(typesDict)
 
