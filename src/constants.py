@@ -1,1 +1,3 @@
 DATASET_PATH = "/home/accazeta/Scrivania/Unibg/ZTesi Magistrale/workspace/AIS_data_analysis/dataset/Hawaii_AIS_ 2019_12_31__2020_03_30.csv"
+
+MIN_INSTANCES_NUM = 50
