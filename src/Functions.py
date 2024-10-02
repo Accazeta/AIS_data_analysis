@@ -1,5 +1,6 @@
 import Constants as c
 import pandas as p
+import numpy as np
 
 import plotly.express as px
 import plotly.graph_objects as go
@@ -147,28 +148,57 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
         po.plot(fig)
 
 
+# Vectorized function to compute the endpoint of the arrow based on lat, lon, angle (cog), and speed (distance)
+def compute_endpoint(lat, lon, cog, speed):
+    # Convert cog angle to radians for trigonometry
+    cog_rad = np.deg2rad(cog)
+    
+    # Approximate distance: 1 degree of latitude ~ 111 km, 1 degree of longitude varies by latitude
+    # We'll assume a small displacement, so approximate distance conversions for small angles
+    delta_lat = (speed / 111) * np.cos(cog_rad)  # Latitude change
+    delta_lon = (speed / (111 * np.cos(np.deg2rad(lat)))) * np.sin(cog_rad)  # Longitude change (corrected for latitude)
+    # Coefficient used to adjust to map size
+    delta_lat = delta_lat * 0.01
+    delta_lon = delta_lon * 0.01
+
+    end_lat = lat + delta_lat
+    end_lon = lon + delta_lon
+    return end_lat, end_lon
+
 def route_clusters_plot(inputDF : p.DataFrame) -> None:
+    text_description = inputDF[['MMSI', 'VesselName', 'COG', 'Avg_Speed', 'Heading', 'IsClassA']].values.tolist()
+    text_description = [f"MMSI: {x[0]}\nName: {x[1]}\nCOG: {x[2]}\nAvg_Speed: {x[3]}\nHeading: {x[4]}\nClassA: {x[5]}" for x in text_description]
+    
+    # Compute all start and end points at once
+    endpoints = [compute_endpoint(lat, lon, cog, speed) for lat, lon, cog, speed in zip(inputDF['LAT'], inputDF['LON'], inputDF['COG'], inputDF['Avg_Speed'])]
+    lat_end, lon_end = zip(*endpoints)
+
+    # Vectorized approach to create interleaved lat and lon lists (start, end, None for line break)
+    lat_all = np.array([[start, end, None] for start, end in zip(inputDF['LAT'], lat_end)]).flatten()
+    lon_all = np.array([[start, end, None] for start, end in zip(inputDF['LON'], lon_end)]).flatten()
+
     fig = go.Figure(go.Scattermapbox(
-                                    lat=inputDF['LAT'],
-                                    lon=inputDF['LON'],
-                                    mode='markers',
+                                    lat=lat_all,
+                                    lon=lon_all,
+                                    mode='markers+lines',
                                     marker=go.scattermapbox.Marker(
-                                        size=12,
+                                        size=7,
                                         color=inputDF['cluster'],
                                         colorscale='portland',
                                         showscale=True
                                     ),
-                                    text='test',
+                                    line=dict(width=2, color='black'),
+                                    hovertext=text_description,
                                     hoverinfo='text'
     ))
 
     fig.update_layout(
         mapbox=dict(
             style='open-street-map',
-            zoom=12,
+            zoom=10,
             center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean())
         ),
-        title='Clustering of route <insert route name>',
+        title=f"Clustering of route {inputDF['Route'].iloc[1]}",
         margin={'r':0, 't':40, 'l':0, 'b':0}
     )
 
