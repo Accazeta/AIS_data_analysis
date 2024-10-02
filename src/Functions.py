@@ -7,13 +7,10 @@ import plotly.offline as po
 from scipy.spatial import ConvexHull
 
 
-
-
 if __name__ == "__main__":
     None
 
-
-def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model):
+def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) -> None:
     '''Function used to plot the results of dbscan and hdbscan\n
     Takes as input two dataframes: clusterd and not_clustered, both containing
     points that were successfully labelled or not, respectively.
@@ -84,7 +81,7 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model):
     po.plot(fig)
 
 
-def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode):
+def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) -> None:
     if inputDF.empty:
         print("No points to be plotted!")
     
@@ -148,3 +145,31 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode):
                           margin={'r':0, 't':40, 'l':0, 'b':0},
                           )
         po.plot(fig)
+
+
+def route_clusters_plot(inputDF : p.DataFrame) -> None:
+    fig = go.Figure(go.Scattermapbox(
+                                    lat=inputDF['LAT'],
+                                    lon=inputDF['LON'],
+                                    mode='markers',
+                                    marker=go.scattermapbox.Marker(
+                                        size=12,
+                                        color=inputDF['cluster'],
+                                        colorscale='portland',
+                                        showscale=True
+                                    ),
+                                    text='test',
+                                    hoverinfo='text'
+    ))
+
+    fig.update_layout(
+        mapbox=dict(
+            style='open-street-map',
+            zoom=12,
+            center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean())
+        ),
+        title='Clustering of route <insert route name>',
+        margin={'r':0, 't':40, 'l':0, 'b':0}
+    )
+
+    po.plot(fig)
