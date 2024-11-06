@@ -2,7 +2,7 @@ import datetime as dt                           # datetime module for time inter
 
 # constants
 FOLDER_PATH = "../dataset/2019/"
-FILE_NAME = 'cleaned_2019_01-03.csv'
+LOG_FILE_NAME = 'log_file.txt'
 SPEED_THRESHOLD = 0.5 # nautical knots
 ABSURD_SPEED_THRESHOLD = 102 # nautical knots
 POINTS_THRESHOLD = 50
