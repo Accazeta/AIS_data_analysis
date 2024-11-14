@@ -106,7 +106,7 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
                                     color = inputDF['Avg_Speed'],
                                     title = output_title,
                                     color_continuous_scale='portland',  #portland
-                                    hover_data=inputDF[['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']]
+                                    hover_data=inputDF[['MMSI', 'BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']]
                                     )
 
         # add domain border
