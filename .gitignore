@@ -164,3 +164,4 @@ dataset/
 src/temp-plot.html
 src/test.html
 out/TREAD_out.pkl
+src/vessel_traffic_density.html

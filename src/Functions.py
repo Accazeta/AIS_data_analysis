@@ -11,6 +11,16 @@ from scipy.spatial import ConvexHull
 if __name__ == "__main__":
     None
 
+def great_circle_distance_vectorized(lat_left, lon_left, lat_right, lon_right):
+    '''Vectorized function used to calculate the Great-Circle distance between two GPS coordinates'''    
+    lon_left, lat_left, lon_right, lat_right = map(np.radians, [lon_left, lat_left, lon_right, lat_right])
+    deg_lon = lon_right - lon_left
+    deg_lat = lat_right - lat_left
+    a = np.sin(deg_lat/2.0)**2 + np.cos(lat_left) * np.cos(lat_right) * np.sin(deg_lon/2.0)**2
+    cx = 2 * np.arcsin(np.sqrt(a))
+    meters = c.EARTH_RADIUS_M * cx
+    return meters
+
 def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) -> None:
     '''Function used to plot the results of dbscan and hdbscan\n
     Takes as input two dataframes: clusterd and not_clustered, both containing
@@ -80,7 +90,6 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) 
                       margin={'r':0, 't':40, 'l':0, 'b':0},
                       )
     po.plot(fig)
-
 
 def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) -> None:
     if inputDF.empty:
@@ -194,63 +203,72 @@ def route_plot(inputDF : p.DataFrame(),
                        )
     po.plot(fig)
 
-
-
-# Vectorized function to compute the endpoint of the arrow based on lat, lon, angle (cog), and speed (modulus)
-def compute_endpoint(lat, lon, cog, sog): #haversine is back!
-    # Convert cog angle to radians for trigonometry
-    cog_rad = np.deg2rad(cog)
+def route_arrows_plot(inputDF : p.DataFrame,
+                      color_criteria : str = 'Avg_Speed',
+                      scale_factor : float = 0.001
+                      ) -> go.Figure:
+    """
+    Plotly plot that plots vessels positions, their instantaneous speed and direction 
     
-    # this is used to make the arrows look more proportional (it's necessary because the earth is round while the map I'm plotting on is flat)
-    scaling_factor = 0.005
-
-    delta = sog * scaling_factor /c.EARTH_RADIUS_KM
-    # calculate latitude/logitude change
-    delta_lat = delta * np.cos(cog_rad)
-    delta_lon = delta * np.sin(cog_rad) / np.cos(np.deg2rad(lat))
-
-    end_lat = lat + np.rad2deg(delta_lat)
-    end_lon = lon + np.rad2deg(delta_lon)
-    return end_lat, end_lon
-
-def route_arrows_plot(inputDF : p.DataFrame) -> None:
-    text_description = inputDF[['MMSI', 'VesselName', 'COG', 'Avg_Speed', 'Heading', 'IsClassA', 'SOG']].values.tolist()
-    text_description = [f"MMSI: {x[0]}\nName: {x[1]}\nCOG: {x[2]}\nAvg_Speed: {x[3]}\nSOG: {x[6]}\nHeading: {x[4]}\nClassA: {x[5]}" for x in text_description]
+    Parameters:
+    :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted
+    :param str color_criteria: the criteria used to assign a color to the different points. Must be a valid dataframe column name. Default set to 'MMSI' 
+    :param float scale_factor: the multiplying constant to adjust arrows length
+    Returns:
+    Plotly Graph Objects plot
+    """
+    if color_criteria not in inputDF.columns:
+        raise KeyError(f"Column {color_criteria} not found in the provided Dataframe")
     
-    # Compute all start and end points at once
-    # applying 'zip' here is like doing pd.concat([whatever], axis=1). 'endpoints' is a list of (lat,lon) tuples
-    endpoints = [compute_endpoint(lat, lon, cog, speed) for lat, lon, cog, speed in zip(inputDF['LAT'], inputDF['LON'], inputDF['COG'], inputDF['Avg_Speed'])]
-    # the '*' operator inside the zip function unzips the elements of the list into two separate lists
-    lat_end, lon_end = zip(*endpoints, strict=True)
+    # Compute arrow endpoints from SOG and COG
+    inputDF["delta_lon"] = scale_factor * inputDF[color_criteria] * np.sin(np.radians(inputDF["COG"]))
+    inputDF["delta_lat"] = scale_factor * inputDF[color_criteria] * np.cos(np.radians(inputDF["COG"]))
+    
+    fig = go.Figure()
 
-    # Vectorized approach to create interleaved lat and lon lists (start, end, None for line break)
-    lat_all = np.array([[start, end, None] for start, end in zip(inputDF['LAT'], lat_end)]).flatten()
-    lon_all = np.array([[start, end, None] for start, end in zip(inputDF['LON'], lon_end)]).flatten()
-    marker_sizes = np.array([[10, 0, 0] for _ in inputDF['LAT']]).flatten().tolist()
+    # add arrow traces before points so that they do not cover the points when overing with the mouse
+    # Add arrows for vessel movement
+    arrow_lat = []
+    arrow_lon = []
+    for _, row in inputDF.iterrows():
+        arrow_lat.extend([round(row['LAT'], 5), round(row['LAT'] + row['delta_lat'], 5), None])
+        arrow_lon.extend([round(row['LON'], 5), round(row['LON'] + row['delta_lon'], 5), None])
+    
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=arrow_lat,
+            lon=arrow_lon,
+            mode='lines',
+            line=dict(width=1, color='grey')
+        )
+    )
 
-    fig = go.Figure(go.Scattermapbox(
-                                    lat=lat_all,
-                                    lon=lon_all,
-                                    mode='markers+lines',
-                                    marker=go.scattermapbox.Marker(
-                                        size=marker_sizes,
-                                        color=inputDF['cluster'],
-                                        colorscale='portland',
-                                        showscale=True
-                                    ),
-                                    line=dict(width=2, color='black'),
-                                    hovertext=text_description,
-                                    hoverinfo='text'
-    ))
+    # Add scatter points for the vessel positions
+    fig.add_trace(
+        go.Scattermapbox(
+            lat=inputDF["LAT"],
+            lon=inputDF["LON"],
+            mode="markers",
+            marker=dict(size=8, color=inputDF[color_criteria], colorscale='portland', showscale=True),
+            text=inputDF["MMSI"],
+            hovertemplate=(
+                'MMSI: %{text}<br>' +
+                'COG: %{customdata[0]:.1f} deg<br>' +
+                'SOG: %{customdata[1]:.1f} kn<br>' +
+                'Avg_Speed: %{customdata[2]:.1f} kn<extra></extra>'
+            ),
+            customdata=inputDF[['COG', 'SOG', 'Avg_Speed']].to_numpy(),
+            name="Arrows plot"
+        )
+    )
 
     fig.update_layout(
         mapbox=dict(
-            style='open-street-map',
-            zoom=10,
-            center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean())
+            style="open-street-map",
+            center=dict(lat=inputDF["LAT"].mean(), lon=inputDF["LON"].mean()),
+            zoom=10
         ),
-        title=f"Clustering of route {inputDF['Route'].iloc[1]}",
-        margin={'r':0, 't':40, 'l':0, 'b':0}
+        margin={'r':40, 't':40, 'l':40, 'b':40},
+        showlegend=True
     )
-
-    po.plot(fig)
+    return fig
