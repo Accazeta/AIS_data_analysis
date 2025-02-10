@@ -156,7 +156,7 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
                           )
         po.plot(fig)
 
-def route_plot(inputDF : p.DataFrame(), 
+def route_plot(inputDF : p.DataFrame, 
                color_criteria : str, 
                title : str = 'Route',
                hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']
@@ -270,5 +270,20 @@ def route_arrows_plot(inputDF : p.DataFrame,
         ),
         margin={'r':40, 't':40, 'l':40, 'b':40},
         showlegend=True
+    )
+    return fig
+
+def plot_kde(df : p.DataFrame,
+             title : str = 'KDE plot'):
+    fig = px.density_mapbox(
+        lat=df['LAT'],
+        lon=df['LON'],
+        z=df['Density'],
+        radius=10,
+        center={"lat": df['LAT'].mean(), "lon": df['LON'].mean()},
+        zoom=10,
+        title=title,
+        mapbox_style='open-street-map',
+        color_continuous_scale='portland'
     )
     return fig
