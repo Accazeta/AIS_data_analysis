@@ -205,13 +205,14 @@ def route_plot(inputDF : p.DataFrame,
 
 def route_arrows_plot(inputDF : p.DataFrame,
                       color_criteria : str = 'Avg_Speed',
-                      scale_factor : float = 0.001
+                      scale_factor : float = 0.001,
+                      title : str = 'Plot with arrows'
                       ) -> go.Figure:
     """
     Plotly plot that plots vessels positions, their instantaneous speed and direction 
     
     Parameters:
-    :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted
+    :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted. Required columns: "MMSI, LAT, LON, COG, SOG, Avg_Speed, "
     :param str color_criteria: the criteria used to assign a color to the different points. Must be a valid dataframe column name. Default set to 'MMSI' 
     :param float scale_factor: the multiplying constant to adjust arrows length
     Returns:
@@ -220,9 +221,10 @@ def route_arrows_plot(inputDF : p.DataFrame,
     if color_criteria not in inputDF.columns:
         raise KeyError(f"Column {color_criteria} not found in the provided Dataframe")
     
+    inputDF = inputDF.copy() # This is necessary so that the code below doesn't raise a warning
     # Compute arrow endpoints from SOG and COG
-    inputDF["delta_lon"] = scale_factor * inputDF[color_criteria] * np.sin(np.radians(inputDF["COG"]))
-    inputDF["delta_lat"] = scale_factor * inputDF[color_criteria] * np.cos(np.radians(inputDF["COG"]))
+    inputDF.loc[:,"delta_lon"] = scale_factor * inputDF.loc[:,color_criteria] * np.sin(np.radians(inputDF.loc[:,"COG"]))
+    inputDF.loc[:,"delta_lat"] = scale_factor * inputDF.loc[:,color_criteria] * np.cos(np.radians(inputDF.loc[:,"COG"]))
     
     fig = go.Figure()
 
@@ -263,6 +265,7 @@ def route_arrows_plot(inputDF : p.DataFrame,
     )
 
     fig.update_layout(
+        title=title,
         mapbox=dict(
             style="open-street-map",
             center=dict(lat=inputDF["LAT"].mean(), lon=inputDF["LON"].mean()),
