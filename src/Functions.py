@@ -6,6 +6,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 import plotly.offline as po
 from scipy.spatial import ConvexHull
+import matplotlib.pyplot as plt
 
 
 if __name__ == "__main__":
@@ -163,7 +164,8 @@ def route_plot(inputDF : p.DataFrame,
                ):
     '''
     plots points and colors them according to the parsed criteria
-    :param str color_criteria: The name of the column used for coloring the points
+    :param p.Dataframe inputDF: Dataframe with all the info about points. Required columns: 'BaseDateTime','LON','LAT','Avg_Speed','EstimatedStatus','Route'
+    :param str|Dataframe color_criteria: The name of the column used for coloring the points or the dataframe column itself
     :param str title: The title of the resulting plot, shown at the top
     :param list hover_data: list of strings specifying the names of the columns to show when the mouse overs on a point
     '''
@@ -172,16 +174,25 @@ def route_plot(inputDF : p.DataFrame,
         print("No points to be plotted!")
         return
     
-    if not color_criteria:
-        print("Empty color criteria")
-        return
+    if type(color_criteria) == p.Series or type(color_criteria) == np.ndarray:
+        final_criteria = color_criteria
+    else:
+        if not color_criteria:
+            print("Empty color criteria")
+            return
+        if type(color_criteria) == str:
+            final_criteria = inputDF[color_criteria]
+        else:
+            print('Wrong color_criteria type')
+            return
+
     
     # plot route points
     fig = px.scatter_mapbox(data_frame = inputDF,
                                 lon = inputDF['LON'],
                                 lat= inputDF['LAT'],
                                 zoom = 12,
-                                color = inputDF[color_criteria],
+                                color = final_criteria,
                                 title = title,
                                 color_continuous_scale='portland',  #portland
                                 hover_data=inputDF[hover_data]
@@ -276,17 +287,24 @@ def route_arrows_plot(inputDF : p.DataFrame,
     )
     return fig
 
-def plot_kde(df : p.DataFrame,
-             title : str = 'KDE plot'):
-    fig = px.density_mapbox(
-        lat=df['LAT'],
-        lon=df['LON'],
-        z=df['Density'],
-        radius=10,
-        center={"lat": df['LAT'].mean(), "lon": df['LON'].mean()},
-        zoom=10,
-        title=title,
-        mapbox_style='open-street-map',
-        color_continuous_scale='portland'
-    )
+def plot_kde(xx : np.ndarray, yy : np.ndarray, zz : np.ndarray, fig_width : float, fig_height : float):
+    '''
+    plots the result of the KDE
+    :param np.ndarray xx: the array of x coordinates resulting from numpy.meshgrid()
+    :param np.ndarray yy: the array of y coordinates resulting from numpy.meshgrid()
+    :param np.ndarray zz: the density values resulting from the KDE
+    :param float fig_width: the width of the figure
+    :param float fig_heigth: the height of the figure
+    '''
+    
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    ax1 = fig.add_subplot(111) #111 -> 1 row, 1 column, index of the current subplot
+    im1 = ax1.pcolormesh(xx, yy, zz, shading='auto', cmap='turbo') # pseudocolor plot with non-regular grid (makes the plt rectangular instead of squared)
+    ax1.set_title('Geographic coordinates KDE')
+    ax1.set_xlabel('Longitude')
+    ax1.set_ylabel('Latitude')
+    ax1.set_aspect('equal')  # Sets the correct aspect ratio
+    plt.colorbar(im1, ax=ax1, label='Density')
+    plt.tight_layout() # automatically adjust subplot size so that it fits its area
+
     return fig
