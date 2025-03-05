@@ -160,7 +160,8 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
 def route_plot(inputDF : p.DataFrame, 
                color_criteria : str, 
                title : str = 'Route',
-               hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']
+               hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus'],
+               filename : str = 'route_plot.html'
                ):
     '''
     plots points and colors them according to the parsed criteria
@@ -212,7 +213,7 @@ def route_plot(inputDF : p.DataFrame,
     fig.update_layout(mapbox_style = 'open-street-map',
                        margin={'r':0, 't':40, 'l':0, 'b':0},
                        )
-    po.plot(fig)
+    po.plot(fig, filename='../plot/' + filename, auto_open=True)
 
 def route_arrows_plot(inputDF : p.DataFrame,
                       color_criteria : str = 'Avg_Speed',
@@ -300,7 +301,7 @@ def plot_kde(xx : np.ndarray, yy : np.ndarray, zz : np.ndarray, fig_width : floa
     fig = plt.figure(figsize=(fig_width, fig_height))
     ax1 = fig.add_subplot(111) #111 -> 1 row, 1 column, index of the current subplot
     im1 = ax1.pcolormesh(xx, yy, zz, shading='auto', cmap='turbo') # pseudocolor plot with non-regular grid (makes the plt rectangular instead of squared)
-    ax1.set_title('Geographic coordinates KDE')
+    ax1.set_title('KDE')
     ax1.set_xlabel('Longitude')
     ax1.set_ylabel('Latitude')
     ax1.set_aspect('equal')  # Sets the correct aspect ratio
