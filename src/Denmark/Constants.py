@@ -1,7 +1,7 @@
 import datetime as dt                           # datetime module for time intervals
 
 # constants
-FOLDER_PATH = "../dataset/2019/"
+FOLDER_PATH = "../dataset/Hawaii/2019/"
 LOG_FILE_NAME = 'log_file.txt'
 SPEED_THRESHOLD = 0.5 # nautical knots
 ABSURD_SPEED_THRESHOLD = 102 # nautical knots
