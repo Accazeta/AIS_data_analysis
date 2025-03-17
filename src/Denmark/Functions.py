@@ -14,10 +14,13 @@ if __name__ == "__main__":
 
 def great_circle_distance_vectorized(lat_left, lon_left, lat_right, lon_right):
     '''Vectorized function used to calculate the Great-Circle distance between two GPS coordinates'''    
-    lon_left, lat_left, lon_right, lat_right = map(np.radians, [lon_left, lat_left, lon_right, lat_right])
-    deg_lon = lon_right - lon_left
-    deg_lat = lat_right - lat_left
-    a = np.sin(deg_lat/2.0)**2 + np.cos(lat_left) * np.cos(lat_right) * np.sin(deg_lon/2.0)**2
+    lon_left_rad = np.radians(lon_left)
+    lat_left_rad = np.radians(lat_left)
+    lon_right_rad = np.radians(lon_right)
+    lat_right_rad = np.radians(lat_right)
+    deg_lon = lon_right_rad - lon_left_rad
+    deg_lat = lat_right_rad - lat_left_rad
+    a = np.sin(deg_lat/2.0)**2 + np.cos(lat_left_rad) * np.cos(lat_right_rad) * np.sin(deg_lon/2.0)**2
     cx = 2 * np.arcsin(np.sqrt(a))
     meters = c.EARTH_RADIUS_M * cx
     return meters
