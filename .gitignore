@@ -179,3 +179,9 @@ thesis/main.fls
 thesis/main.fdb_latexmk
 thesis/main.aux
 thesis/bibliography.bib
+thesis/main.bbl
+thesis/main.blg
+thesis/main.lof
+thesis/main.lot
+thesis/main.synctex.gz
+thesis/main.toc
