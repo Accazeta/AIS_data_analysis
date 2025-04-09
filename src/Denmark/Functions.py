@@ -71,24 +71,32 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) 
     # Add polygons on map
     for label in clustered['Label'].unique():
         groupLATLONDF = clustered[clustered['Label']==label][['LAT', 'LON']]
-        hull = ConvexHull(groupLATLONDF)
-        hull_lon = [groupLATLONDF['LON'].reset_index().iloc[vertex] for vertex in hull.vertices]
-        hull_lat = [groupLATLONDF['LAT'].reset_index().iloc[vertex] for vertex in hull.vertices]
-    
-        hull_lon = [serie.tolist()[1] for serie in hull_lon]
-        hull_lat = [serie.tolist()[1] for serie in hull_lat]
-    
-        fig.add_trace(go.Scattermapbox(
-            lat=hull_lat + [hull_lat[0]],
-            lon=hull_lon + [hull_lon[0]],
-            mode='lines',
-            line=dict(color='black', width=2),
-            below=0,
-            showlegend=False,
-            name='WP_' + str(label)
-            #fill='toself',
-            #fillcolor='rgba(255,0,0,0.2)'
-        ))
+        if len(groupLATLONDF) >= 3:
+            unique_lats = groupLATLONDF['LAT'].nunique()
+            unique_lons = groupLATLONDF['LON'].nunique()
+            if unique_lats > 1 and unique_lons > 1:
+                hull = ConvexHull(groupLATLONDF)
+                hull_lon = [groupLATLONDF['LON'].reset_index().iloc[vertex] for vertex in hull.vertices]
+                hull_lat = [groupLATLONDF['LAT'].reset_index().iloc[vertex] for vertex in hull.vertices]
+
+                hull_lon = [serie.tolist()[1] for serie in hull_lon]
+                hull_lat = [serie.tolist()[1] for serie in hull_lat]
+
+                fig.add_trace(go.Scattermapbox(
+                    lat=hull_lat + [hull_lat[0]],
+                    lon=hull_lon + [hull_lon[0]],
+                    mode='lines',
+                    line=dict(color='black', width=2),
+                    below=0,
+                    showlegend=False,
+                    name='WP_' + str(label)
+                    #fill='toself',
+                    #fillcolor='rgba(255,0,0,0.2)'
+                ))
+            else:
+                print(f'Skipping cluster {label} - points are in the same line (LAT: {unique_lats}, LON: {unique_lons})')
+        else:
+            print(f'Skipping hull creation for cluster {label} - less than 3 points ({len(groupLATLONDF)})')
 
     fig.update_layout(mapbox_style = 'open-street-map',
                       margin={'r':0, 't':40, 'l':0, 'b':0},

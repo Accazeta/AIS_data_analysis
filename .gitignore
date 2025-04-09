@@ -165,3 +165,17 @@ src/temp-plot.html
 src/test.html
 out/TREAD_out.pkl
 src/vessel_traffic_density.html
+thesis/sections/frontmatter/titlepage.tex
+thesis/sections/frontmatter/abstract.tex
+thesis/sections/results.tex
+thesis/sections/methodology.tex
+thesis/sections/literature_review.tex
+thesis/sections/introduction.tex
+thesis/sections/conclusions.tex
+thesis/README.md
+thesis/main.tex
+thesis/main.out
+thesis/main.fls
+thesis/main.fdb_latexmk
+thesis/main.aux
+thesis/bibliography.bib

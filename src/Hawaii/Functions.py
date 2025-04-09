@@ -213,7 +213,7 @@ def route_plot(inputDF : p.DataFrame,
     fig.update_layout(mapbox_style = 'open-street-map',
                        margin={'r':0, 't':40, 'l':0, 'b':0},
                        )
-    po.plot(fig, filename='../plot/' + filename, auto_open=True)
+    po.plot(fig, filename='../../plot/' + filename, auto_open=True)
 
 def route_arrows_plot(inputDF : p.DataFrame,
                       color_criteria : str = 'Avg_Speed',
