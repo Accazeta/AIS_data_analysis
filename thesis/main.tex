@@ -1,0 +1,79 @@
+% main.tex - Main file that imports all sections
+\documentclass[12pt,a4paper,twoside]{report}
+
+% Essential packages
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}  % For images
+\usepackage{booktabs}  % For professional tables
+\usepackage{amsmath,amssymb}  % For math
+\usepackage{natbib}    % For bibliography
+\usepackage{hyperref}  % For clickable links
+\usepackage{fancyhdr} % For headers and footers
+
+% For supporting multiple languages
+\usepackage[english]{babel}
+
+% Set up page margins
+\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+
+% Custom commands
+\newcommand{\universityname}{University Name}
+\newcommand{\facultyname}{Faculty Name}
+\newcommand{\departmentname}{Department Name}
+\newcommand{\thesistitle}{Thesis Title}
+\newcommand{\thesisauthor}{Your Name}
+\newcommand{\thesisyear}{2025}
+\newcommand{\supervisorname}{Prof. Supervisor Name}
+
+% Page styles
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE,RO]{\thepage}
+\fancyhead[LO]{\leftmark}
+\fancyhead[RE]{\rightmark}
+
+\begin{document}
+
+% Title page
+\input{sections/frontmatter/titlepage}
+
+% Front matter
+\pagenumbering{roman}
+
+% Abstract/Summary
+\input{sections/frontmatter/abstract}
+
+% Table of contents
+\tableofcontents
+\listoffigures
+\listoftables
+\clearpage
+
+% Main matter
+\pagenumbering{arabic}
+
+% Introduction
+\input{sections/introduction}
+
+% Literature Review
+\input{sections/literature_review}
+
+% Methodology
+\input{sections/methodology}
+
+% Results
+\input{sections/results}
+
+% Conclusions
+\input{sections/conclusions}
+
+% Bibliography
+\bibliographystyle{apalike}
+\bibliography{bibliography}
+
+% Appendices (if any)
+\appendix
+% \input{sections/appendices}
+
+\end{document}
