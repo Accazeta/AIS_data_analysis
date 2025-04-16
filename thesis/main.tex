@@ -1,7 +1,7 @@
 % main.tex - Main file that imports all sections
-\documentclass[12pt,a4paper,twoside]{report}
+\documentclass[12pt,a4paper,twoside]{report} %12pt -> font size as requested by uni guidelines
 
-% Essential packages
+% Packages
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 \usepackage{graphicx}  % For images
@@ -10,21 +10,22 @@
 \usepackage{natbib}    % For bibliography
 \usepackage{hyperref}  % For clickable links
 \usepackage{fancyhdr} % For headers and footers
+\usepackage{setspace} % For "interlinea"
 
-% For supporting multiple languages
+% english language package
 \usepackage[english]{babel}
 
-% Set up page margins
-\usepackage[top=2.5cm, bottom=2.5cm, left=3cm, right=2.5cm]{geometry}
+% Page margins
+\usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 
-% Custom commands
-\newcommand{\universityname}{University Name}
-\newcommand{\facultyname}{Faculty Name}
-\newcommand{\departmentname}{Department Name}
-\newcommand{\thesistitle}{Thesis Title}
-\newcommand{\thesisauthor}{Your Name}
+% Custom commands (probably useless)
+\newcommand{\universityname}{Università degli Studi di Bergamo}
+\newcommand{\facultyname}{Scuola di Ingegneria}
+\newcommand{\departmentname}{Dipartimento di Ingegneria Gestionale, dell'Informazione e della Produzione}
+\newcommand{\thesistitle}{XXXXXX TITOLO TESI XXXXXXX}
+\newcommand{\thesisauthor}{Federico Panzeri}
 \newcommand{\thesisyear}{2025}
-\newcommand{\supervisorname}{Prof. Supervisor Name}
+\newcommand{\supervisorname}{Prof.\Mirko\Mazzoleni}
 
 % Page styles
 \pagestyle{fancy}
@@ -36,13 +37,16 @@
 \begin{document}
 
 % Title page
-\input{sections/frontmatter/titlepage}
+\input{sections/frontmatter/0_titlepage}
 
+% Set 1,5 spacing for the rest of the document
+\onehalfspacing
 % Front matter
+\clearpage % force a page break
 \pagenumbering{roman}
 
 % Abstract/Summary
-\input{sections/frontmatter/abstract}
+\input{sections/frontmatter/1_abstract}
 
 % Table of contents
 \tableofcontents
@@ -50,25 +54,26 @@
 \listoftables
 \clearpage
 
-% Main matter
+% Main stuff
 \pagenumbering{arabic}
 
 % Introduction
-\input{sections/introduction}
+\input{sections/2_introduction}
 
 % Literature Review
-\input{sections/literature_review}
+\input{sections/3_literature_review}
 
 % Methodology
-\input{sections/methodology}
+\input{sections/4_methodology}
 
 % Results
-\input{sections/results}
+\input{sections/5_results}
 
 % Conclusions
-\input{sections/conclusions}
+\input{sections/6_conclusions}
 
 % Bibliography
+\nocite{*} %adds all bibliography to the main file
 \bibliographystyle{apalike}
 \bibliography{bibliography}
 
