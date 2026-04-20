@@ -8,33 +8,25 @@ di come sono stati sfruttati/implementati/modificati (si fa al capitolo successi
 
 \section{Contesto della tesi}
 L'obiettivo di questa literature review è quello di esplorare lo stato dell'arte delle tecniche di
-analisi di dati AIS che vengono usate per il monitoraggio del traffico marittimo al fine di individuare
-eventuali anomalie.
-La ricerca dei vari articoli accademici da analizzare è partita sfruttando il lavora già svolto da \cite{riassuntone},
-i quali hanno raccolto e catalogato in un unico documento 44 articoli sul tema pubblicati dal 2007 al 2021.
-All'interno del loro paper, \cite{riassuntone} si occupano di catalogare gli articoli analizzati, al fine di mostrare 
-i problemi affrontati e le caratteristiche principali delle varie metodologie.
-Dal loro lavoro si evince che la maggior parte degli approcci costruisce un modello con i dati a disposizione prima ancora
-di avviare la parte di anomaly detection. Questa parte di anomaly detection viene poi realizzata con strumenti diversi da paper a paper e, per 
- semplicità, gli autori hanno raggruppato questi strumenti in tre macro categorie (e relative sotto-categorie):
-\begin{itemize}
-    \item Machine Learning
-    \begin{itemize}
-        \item DBSCAN
-        \item Neural Networks
-    \end{itemize}
-    \item Stochastic
-    \begin{itemize}
-        \item Gaussian Process
-        \item Gaussian Mixture Model
-        \item Kernel Density Estimation
-        \item Bayesian Network
-    \end{itemize}
-    \item Geometry
-\end{itemize} 
-Alcuni paper usano tecniche appartenenti ad una sola categoria, altri invece integrano un mix di strumenti classificati sotto categorie differenti.
+analisi di dati AIS per il rilevamento di anomalie nel traffico marittimo.
 
+La letteratura su questo tema è stata sistematicamente raccolta e catalogata da \cite{riassuntone},
+che analizzano 44 contributi pubblicati tra il 2007 e il 2021. Tale lavoro costituisce un punto di
+riferimento consolidato per orientarsi nello stato dell'arte e viene qui adottato come base per la
+presente review.
 
+Un elemento trasversale che emerge dall'analisi di \cite{riassuntone} è la tendenza della maggior
+parte degli approcci a separare una fase preliminare di modellazione dei dati da una successiva fase
+di rilevamento delle anomalie. Le tecniche impiegate in quest'ultima fase sono eterogenee e vengono
+ricondotte dagli autori a tre macro-categorie: metodi di \textbf{Machine Learning} (tra cui DBSCAN
+e reti neurali), metodi \textbf{Stocastici} (tra cui Gaussian Process, Gaussian Mixture Model,
+Kernel Density Estimation e Bayesian Network) e metodi \textbf{Geometrici}. Alcuni contributi
+adottano tecniche appartenenti a una singola categoria, mentre altri combinano approcci di categorie
+diverse.
+
+Questa tassonomia, pur nella sua necessaria semplificazione, offre una chiave di lettura utile per
+comprendere le scelte metodologiche dei vari autori e per collocare il framework adottato nella
+presente tesi --- quello proposto da \cite{pallotta} --- all'interno del panorama esistente.
 \section{Section 2}
 Section 2 testo
 
