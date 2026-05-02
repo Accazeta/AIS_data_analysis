@@ -2,44 +2,130 @@
 \chapter{Literature Review}
 \label{chap:literature}
 
-Descrizione prettamente teorica di quanto analizzato all'inizio del lavoro di tesi (vedi presentazione su drive condiviso)
-Descrizione dei lavori altrui che poi sono stati utilizzati in questa tesi, senza però entrare troppo nel dettaglio
-di come sono stati sfruttati/implementati/modificati (si fa al capitolo successivo)
-
+% ─────────────────────────────────────────────
 \section{Contesto della tesi}
-L'obiettivo di questa literature review è quello di esplorare lo stato dell'arte delle tecniche di
-analisi di dati AIS per il rilevamento di anomalie nel traffico marittimo.
-
-La letteratura su questo tema è stata sistematicamente raccolta e catalogata da \cite{riassuntone},
-che analizzano 44 contributi pubblicati tra il 2007 e il 2021. Tale lavoro costituisce un punto di
-riferimento consolidato per orientarsi nello stato dell'arte e viene qui adottato come base per la
-presente review.
-
-Un elemento trasversale che emerge dall'analisi di \cite{riassuntone} è la tendenza della maggior
-parte degli approcci a separare una fase preliminare di modellazione dei dati da una successiva fase
-di rilevamento delle anomalie. Le tecniche impiegate in quest'ultima fase sono eterogenee e vengono
-ricondotte dagli autori a tre macro-categorie: metodi di \textbf{Machine Learning} (tra cui DBSCAN
-e reti neurali), metodi \textbf{Stocastici} (tra cui Gaussian Process, Gaussian Mixture Model,
-Kernel Density Estimation e Bayesian Network) e metodi \textbf{Geometrici}. Alcuni contributi
-adottano tecniche appartenenti a una singola categoria, mentre altri combinano approcci di categorie
-diverse.
-
-Questa tassonomia, pur nella sua necessaria semplificazione, offre una chiave di lettura utile per
-comprendere le scelte metodologiche dei vari autori e per collocare il framework adottato nella
-presente tesi --- quello proposto da \cite{pallotta} --- all'interno del panorama esistente.
-\section{Section 2}
-Section 2 testo
-
-\section{Un'altra section}
-Un'altra section testo
-
-% Example of citation
+\label{sec:contesto}
 
 
-% Example of a figure
-\begin{figure}[htbp]
-    \centering
-    \includegraphics[width=0.8\textwidth]{images/UNIBG_logo.jpg}
-    \caption{UNIBG logo usato come placeholder}
-    \label{fig:framework}
-\end{figure}
+L’obiettivo di questa literature review è quello di esplorare lo stato dell’arte delle tecniche 
+di analisi dei dati AIS per il rilevamento di anomalie nel traffico marittimo, 
+cercando di fornire una panoramica generale.
+
+\subsection{Storia e funzionamento dell'AIS}
+
+L’Automatic Identification System (AIS) è un sistema di comunicazione utilizzato nella navigazione marittima. 
+La sua origine viene generalmente attribuita a Benny Pettersson, che sviluppò un primo prototipo nei primi anni 
+’90. Inizialmente concepito per ridurre il rischio di collisioni in mare, il sistema è stato poi 
+progressivamente adottato a livello internazionale, fino a ottenere un riconoscimento formale da parte 
+dell’International Maritime Organization (IMO). 
+Nell’ambito dell’accordo SOLAS, l’installazione dell’AIS è diventata obbligatoria per le navi con 
+stazza lorda superiore a 300 tonnellate impegnate in viaggi internazionali e per tutte le navi passeggeri 
+\cite{imo2002}.
+
+Dal punto di vista tecnico, l’AIS opera su due canali radio VHF intorno ai 162 MHz 
+e utilizza il protocollo TDMA (Time-Division Multiple Access), 
+che permette a più imbarcazioni di trasmettere senza interferire tra loro \cite{riassuntone}. 
+La copertura, in condizioni standard, arriva fino a circa 50 km (linea di vista), 
+mentre l’uso di ricevitori satellitari (S-AIS) consente di estenderla anche alle acque oceaniche \cite{riassuntone}.
+ La frequenza di trasmissione dei messaggi non è costante, ma varia in funzione della velocità e dello stato 
+ della nave, passando da pochi secondi a diversi minuti \cite{riassuntone}.
+
+\subsection{Dati trasmessi}
+
+I messaggi AIS possono essere suddivisi in tre categorie principali \cite{riassuntone}:
+
+\begin{itemize}
+\item \textbf{Dati statici}: includono informazioni identificative della nave, come MMSI, nome, tipo e dimensioni.
+\item \textbf{Dati dinamici}: descrivono lo stato corrente della navigazione, tra cui posizione GPS, velocità (SOG), rotta (COG), orientamento della prua (HE), variazione della rotta (ROT) e stato operativo.
+\item \textbf{Dati di viaggio}: comprendono informazioni aggiuntive come pescaggio, tipo di carico, destinazione ed ETA. Essendo inseriti manualmente, risultano generalmente meno affidabili \cite{pallotta}.
+\end{itemize}
+
+Ai fini dell’analisi del comportamento delle navi, i dati dinamici sono in genere i più rilevanti, 
+in quanto descrivono in modo continuo l’evoluzione delle traiettorie.
+
+\subsection{Limiti e problemi noti}
+
+Nonostante la ricchezza informativa, i dati AIS presentano diverse criticità che ne complicano l’analisi. 
+Dal punto di vista della qualità, possono verificarsi lacune nella copertura dovute a limiti dei ricevitori 
+terrestri o a interferenze, soprattutto in aree molto trafficate \cite{pallotta}.
+
+Inoltre, il protocollo AIS non prevede meccanismi di autenticazione o cifratura, 
+rendendo possibile la manipolazione dei dati, ad esempio tramite spoofing o spegnimento del transponder \cite{riassuntone}. 
+Un ulteriore problema è rappresentato dalla diversa frequenza di trasmissione tra le varie classi di 
+imbarcazioni, che introduce una certa eterogeneità nei dataset.
+
+Nel complesso, la dimensione, la rumorosità e la complessità di questi dati rendono necessario 
+l’utilizzo di tecniche automatiche di analisi dei dati.
+
+% ─────────────────────────────────────────────
+\section{Panoramica degli approcci di anomaly detection}
+\label{sec}
+
+La letteratura sull’anomaly detection nei dati AIS è stata raccolta, ad esempio, in \cite{riassuntone}, 
+che prende in esame diversi contributi pubblicati tra il 2007 e il 2021. Un elemento ricorrente è la 
+distinzione tra una fase iniziale di modellazione del traffico normale e una successiva fase di 
+individuazione delle anomalie.
+
+Le tecniche proposte vengono generalmente suddivise in tre macro-categorie: 
+\textbf{Machine Learning}, \textbf{Stocastici} e \textbf{Geometrici}, 
+a cui si aggiungono approcci ibridi che combinano più metodologie.
+
+Per quanto riguarda la tipologia di anomalie, si fa riferimento alla classificazione proposta da Lane et al. 
+\cite{lane2010}, che distingue diverse forme di comportamento anomalo. 
+Tra queste, la più studiata è la \textit{route deviation}, che rappresenta anche il focus del presente lavoro.
+
+\subsection{Approcci di Machine Learning}
+
+Gli approcci basati su machine learning comprendono principalmente metodi di clustering e reti neurali. 
+Tra i primi, DBSCAN è particolarmente diffuso, in quanto si adatta bene alla natura spaziale dei dati e 
+consente di identificare cluster senza specificarne a priori il numero \cite{pallotta}. 
+Le traiettorie che non appartengono ad alcun cluster vengono generalmente considerate anomale.
+
+Le reti neurali, invece, permettono di modellare relazioni più complesse e non lineari, 
+e nelle versioni più recenti hanno mostrato buone prestazioni.
+
+Questi approcci risultano scalabili e relativamente semplici da implementare, 
+ma presentano anche alcuni limiti, tra cui la scarsa interpretabilità (soprattutto per le reti neurali) 
+e la difficoltà di generalizzazione a contesti geografici diversi \cite{mascaro}.
+
+\subsection{Approcci Stocastici}
+
+Gli approcci stocastici modellano il comportamento delle navi come un processo probabilistico. 
+Tra le tecniche più comuni si trovano GMM, KDE, Gaussian Process e reti bayesiane.
+
+In generale, questi metodi stimano la distribuzione delle traiettorie normali a partire dai dati storici e 
+classificano come anomale quelle con bassa probabilità. 
+Offrono una buona base teorica e permettono di quantificare l’incertezza, ma possono risultare onerosi 
+dal punto di vista computazionale su dataset molto grandi.
+
+Alcuni lavori, come \cite{kowalska}, mostrano l’efficacia dei Gaussian Process, 
+mentre le reti bayesiane risultano interessanti per la loro maggiore interpretabilità, 
+pur presentando difficoltà di scalabilità \cite{mascaro}.
+
+\subsection{Approcci Geometrici}
+
+Gli approcci geometrici si basano sulle proprietà spaziali delle traiettorie, 
+ad esempio tramite il calcolo del convex hull (inviluppo convessp) delle rotte osservate \cite{riassuntone}. 
+Si tratta in genere di metodi semplici e interpretabili, ma meno flessibili e meno robusti in presenza di 
+rumore rispetto ad altri approcci.
+
+% ─────────────────────────────────────────────
+\section{Il framework TREAD di Pallotta et al.}
+\label{sec}
+
+Tra gli approcci presenti in letteratura, il metodo adottato in questo lavoro è il framework TREAD 
+(Traffic Route Extraction and Anomaly Detection) proposto da \cite{pallotta}, 
+che combina tecniche di clustering e analisi statistica.
+
+Il framework è non supervisionato e incrementale: apprende i pattern di traffico direttamente dai dati AIS 
+senza richiedere informazioni preliminari. Il processo si articola in due fasi principali. 
+Nella prima fase, vengono identificati i waypoint caratteristici (come porti o punti di passaggio) 
+tramite un algoritmo di clustering basato su DBSCAN. Tali waypoint vengono usati per costruire le rotte, definite
+come il percorso di un nave da un waypoint di partenza a uno di arrivo. Talvolta waypoint di partenza e di arrivo coincidono.
+
+Nella seconda fase, le rotte apprese vengono utilizzate per analizzare nuove traiettorie e 
+individuare eventuali anomalie, sulla base della loro probabilità rispetto al modello.
+
+Tra i principali vantaggi di questo approccio vi sono la possibilità di aggiornare il modello in modo 
+incrementale, la capacità di gestire dati AIS anche non continui e una rappresentazione relativamente 
+compatta del traffico, adatta anche a dataset di grandi dimensioni.

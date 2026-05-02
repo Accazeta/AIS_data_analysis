@@ -7,16 +7,16 @@
 \usepackage{graphicx}  % For images
 \usepackage{booktabs}  % For professional tables
 \usepackage{amsmath,amssymb}  % For math
-\usepackage{natbib}    % For bibliography
+\usepackage[numbers]{natbib}    % For bibliography
 \usepackage{hyperref}  % For clickable links
 \usepackage{fancyhdr} % For headers and footers
 \usepackage{setspace} % For "interlinea"
-
 % english language package
 \usepackage[english]{babel}
-
 % Page margins
 \usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
+
+\usepackage{hyperref}
 
 % Custom commands (probably useless)
 \newcommand{\universityname}{Università degli Studi di Bergamo}
@@ -74,7 +74,7 @@
 
 % Bibliography
 \nocite{*} %adds all bibliography to the main file
-\bibliographystyle{apalike}
+\bibliographystyle{plainnat}
 \bibliography{bibliography}
 
 % Appendices (if any)
