@@ -2,14 +2,173 @@
 \chapter{Methodology}
 \label{chap:methodology}
 
-Descrizione esaustiva di quello che ho fatto e di come ho applicato i lavori altrui presi facendo la literature review
-Pensavo di sviluppare queste sezioni
+Questo capitolo descrive il lavoro svolto nell'ambito di questa tesi: viene illustrato come il framework TREAD proposto
+da Pallotta et al.~\cite{pallotta} è stato analizzato, re-implementato e (in alcune componenti) esteso e migliorato, per poi
+testarlo su un dataset AIS con dati reali relativi all'arcipelago delle Hawaii.
 
-\section{Sezione 1 - breve introduzione}
-Riassumere brevemente quanto indicato nel capitolo 2 - literature review
-Qualcosa d'altro?
+\section{Introduzione}
+\label{sec:meth_intro}
+Non so bene cosa scrivere qui
 
-\section{Sezione 2}
+\section{Obiettivi}
+\label{sec:meth_objectives}
+
+I quesiti di ricerca su cui è stata sviluppata la metodologia sono i seguenti:
+\begin{enumerate}
+    \item Il framework TREAD (che è stato sviluppato agli inizi degli anni 2010), è ancora applicabile ad un dataset
+          moderno e più voluminoso?
+    \item Quali aspetti e caratteristiche dell'algoritmo sono ``riciclabili'' e quali hanno richiesto adattamenti o sostituzioni?
+    \item È possibile ottenere risultati qualitativamente migliori?
+    \item Quali metriche è opportuno utilizzare per quantificare le prestazioni dell'algoritmo?
+\end{enumerate} 
+
+\section{Dataset}
+\label{sec:meth_dataset}
+
+I dati utilizzati provengono dal portale pubblico del NOAA\footnote{Il NOAA mette a disposizione due modalità di accesso ai dati: tramite il portale \url{https://marinecadastre.gov/accessais/}, che consente di filtrare per zona geografica e intervallo temporale, oppure tramite \url{https://hub.marinecadastre.gov/pages/vesseltraffic}, 
+che offre il download in bulk di tutti i dati AIS registrati suddivisi per anno.} (National Oceanic and Atmospheric Administration), un'agenzia scientifica e
+normativa statunitense con diversi compiti tra cui il monitoraggio oceanico~\cite{noaa_wiki}.
+I file scaricati dalla piattaforma hanno nome nel formato \texttt{AIS\_YYYY\_MM\_DD} (dove YYYY rappresenta l'anno, MM il mese e DD il giorno
+di registrazione dei dati) e contengono tutti i messaggi ricevuti dall'ente in una singola giornata di tutto il territorio nazionale monitorato.
+Per questa tesi sono stati utilizzati i dati relativi al primo trimestre 2019 (gennaio-marzo, estremi inclusi), filtrati
+sull'area delle Hawaii tramite una bounding box le cui estremità hanno le seguenti coordinate:
+\begin{itemize}
+    \item Latitudine: da $18.77^\circ$N a $22.63^\circ$N,
+    \item Longitudine: da $160.11^\circ$W a $154.39^\circ$W.
+\end{itemize}
+
+\subsection{Struttura del dataset}
+\label{ssec:meth_dataset_structure}
+
+Ogni record del dataset corrisponde a un singolo messaggio AIS trasmesso da una nave e contiene diversi campi, riportati nella tabella~\ref{tab:dataset_columns}.
+I campi si dividono in due categorie: attributi statici, che descrivono le caratteristiche fisse della nave e normalmente non variano tra
+un messaggio e l'altro, e attributi dinamici, che riflettono lo stato corrente della nave al momento della trasmissione.
+
+\begin{table}[ht]
+\centering
+\caption{Struttura del dataset AIS del NOAA.}
+\label{tab:dataset_columns}
+\begin{tabular}{llp{7cm}}
+\hline
+\textbf{Colonna} & \textbf{Tipo} & \textbf{Descrizione} \\
+\hline
+\multicolumn{3}{l}{\textit{Attributi statici}} \\
+\texttt{MMSI}          & intero   & Maritime Mobile Service Identity: identificativo univoco della nave \\
+\texttt{VesselName}    & stringa  & Nome della nave \\
+\texttt{IMO}           & stringa  & Numero IMO (International Maritime Organization) \\
+\texttt{CallSign}      & stringa  & Nominativo radio della nave \\
+\texttt{VesselType}    & intero   & Codice numerico che indica la tipologia di nave (cargo, tanker, passeggeri, ecc.) \\
+\texttt{Length}        & intero   & Lunghezza della nave in metri \\
+\texttt{Width}         & intero   & Larghezza della nave in metri \\
+\texttt{Draft}         & decimale & Pescaggio della nave in decimi di metro \\
+\texttt{Cargo}         & intero   & Codice del tipo di carico trasportato \\
+\texttt{TransceiverClass} & booleano & Classe del transponder AIS: \texttt{A}  o \texttt{B} (imbarcazioni minori) \\
+\hline
+\multicolumn{3}{l}{\textit{Attributi dinamici}} \\
+\texttt{BaseDateTime}  & datetime & Timestamp del messaggio (UTC) \\
+\texttt{LAT}           & decimale & Latitudine della posizione (gradi decimali) \\
+\texttt{LON}           & decimale & Longitudine della posizione (gradi decimali) \\
+\texttt{SOG}           & decimale & Speed Over Ground: velocità rispetto al fondale in nodi \\
+\texttt{COG}           & decimale & Course Over Ground: direzione di movimento in gradi (0--360°) \\
+\texttt{Heading}       & decimale & Prua della nave in gradi (0--360°), distinta dal COG \\
+\texttt{Status}        & intero   & Stato di navigazione AIS (es. in navigazione, all'ancora, in manovra) \\
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Qualità dei dati}
+\label{ssec:meth_dataset_quality}
+
+Oltre alla struttura, è opportuno considerare la qualità intrinseca dei dati. Un vantaggio rilevante del dataset NOAA
+rispetto ad altre fonti pubbliche (in particolare i dati danesi considerati e poi scartati in fase esplorativa) è che
+i dati sono già stati filtrati dagli errori più grossolani, rendendo l'uso di tecniche di pulizia aggiuntive meno
+critico. È stata tuttavia mantenuta l'assunzione esplicita che le colonne \texttt{MMSI}, \texttt{BaseDateTime},
+\texttt{LAT}, \texttt{LON} siano affidabili e prive di errori, in quanto queste quattro colonne costituiscono
+la base di tutte le elaborazioni successive.
+
+% -----------------------------------------------------------------------
+\section{Pre-processing dei dati}
+\label{sec:meth_preprocessing}
+
+L'intera fase di pre-processing è implementata in Python, utilizzando dei notebook Jupyter.
+Le tecnologie utilizzate verranno descritte meglio nella Sezione~\ref{sec:meth_technologies}.
+
+\subsection{Importazione, filtraggio geografico e rimozione dei duplicati}
+
+I file scaricati dalla piattaforma del NOAA sono in formato ``.zip''. Pertanto vengono automaticamente decompressi, importati in memoria
+e successivamente eliminati dal disco per liberare spazio.
+Durante l'importazione, ogni file csv letto viene salvato in memoria sottoforma di \texttt{DataFrame}. In questa fase, 
+vengono immediatamente scartati tutti quei messaggi le cui coordinate di latitudine e longitudine ricadono
+al di fuori del perimetro citato nella sezione~\ref{sec:meth_dataset}.
+Tutti i \texttt{DataFrame} così creati vengono concatenati in un unico \texttt{DataFrame} finale, che viene esportato in un unico file CSV di backup.
+Le operazioni di importazione e filtraggio avvengono grazie alla libreria \textbf{Polars}, che è stata scelta per il fatto che (a differenza
+di Pandas) supporta il multithreading nativamente. 
+
+In una fase successiva, i record esattamente duplicati (identici in ogni attributo) vengono rimossi, lasciandone solo uno per ogni gruppo duplicato.
+
+
+Viene poi rimosso un ulteriore sottoinsieme di record: quelli generati da navi, la cui somma di record presenti nel database è inferiore
+al 10\% della media calcolata sul totale delle navi presenti. 
+Per identificare l'appartenenza di un record ad una nave o meno, è stato utilizzato il valore di \texttt{MMSI}. Come citato in precedenza alla
+sezione~\ref{ssec:meth_dataset_quality}, tale attributo si assume corretto e validato dal NOAA in fase di raccolta dei dati.
+
+La soglia usata per rimuovere le navi meno attive è calcolata dinamicamente (e non come valore fisso) in modo
+da rendere il codice indipendente dalle dimensioni del dataset che si decide di utilizzare. L'idea dietro questa decisione è che
+le navi al di sotto di questa soglia contribuiscono in maniera trascurabile al traffico dell'area e la loro presenza potrebbe 
+distorcere la fase di clustering.
+Prima dell'applicazione di questa soglia il dataset conteneva 602 imbarcazioni distinte (5.460.800 record). In seguito il numero di 
+navi distinte è passato a 403 (5.415.168 righe), eliminando circa lo 0,84\% dei record totali. 
+
+
+\begin{table}[ht]
+\centering
+\caption{Ottimizzazione dei tipi di dato: conversioni effettuate e specifiche tecniche indicate dalla normativa.}
+\label{tab:dtype_optimization}
+\begin{tabular}{lllp{6.5cm}}
+\hline
+\textbf{Colonna} & \textbf{Formato originale} & \textbf{Nuovo formato} & \textbf{Motivazione} \\
+\hline
+\texttt{MMSI} & \texttt{int64} & \texttt{int32} & MMSI è codificato su 30 bit, con valori validi fino a 999\,999\,999. Un \texttt{int32} (massimo $\approx 2.1 \times 10^9$) è sufficiente. \\
+\texttt{LAT} & \texttt{float64} & \texttt{float32} & La latitudine è codificata su 27 bit in unità di $1/10\,000$ di minuto, corrispondenti a una risoluzione di circa 0.185 m. La precisione di \texttt{float32} ($\approx 7$ cifre decimali) è ampiamente sufficiente. \\
+\texttt{LON} & \texttt{float64} & \texttt{float32} & La longitudine è codificata su 28 bit con la stessa risoluzione della latitudine. Stessa giustificazione. \\
+\texttt{SOG} & \texttt{float64} & \texttt{float32} & La SOG è codificata su 10 bit in passi di $1/10$ di nodo, con massimo 102.2 nodi. Nessuna necessità di doppia precisione. \\
+\texttt{COG} & \texttt{float64} & \texttt{float32} & Il COG è codificato su 12 bit in passi di $1/10$ di grado (0--359.9°). Stessa giustificazione della SOG. \\
+\texttt{Heading} & \texttt{float64} & \texttt{float32} & La prua è codificata su 9 bit in gradi interi (0--359). Stessa giustificazione. \\
+\texttt{VesselType} & \texttt{float64} & \texttt{int8} & Il codice tipo nave è codificato su 8 bit (valori 0--255, Tab.~50). Un \texttt{int8} non con segno sarebbe sufficiente; si usa \texttt{int8} con segno per compatibilità con Pandas. \\
+\texttt{Status} & \texttt{float64} & \texttt{int8} & Lo stato di navigazione è codificato su 4 bit (valori 0--15, Tab.~46). \\
+\texttt{Length} & \texttt{float64} & \texttt{int16} & Le dimensioni nave sono codificate complessivamente su 30 bit suddivisi in quattro campi A, B, C, D da massimo 511/511/63/63 m rispettivamente (Tab.~50). Un \texttt{int16} (massimo 32\,767) è sufficiente. \\
+\texttt{Width} & \texttt{float64} & \texttt{int16} & Stessa giustificazione di \texttt{Length}. \\
+\texttt{Draft} & \texttt{float64} & \texttt{float32} & Il pescaggio massimo è codificato su 8 bit in passi di $1/10$ di metro, con massimo 25.5 m (Tab.~50). Nessuna necessità di doppia precisione. \\
+\texttt{Cargo} & \texttt{float64} & \texttt{int8} & Il codice carico condivide la stessa codifica a 8 bit del tipo nave (Tab.~50). \\
+\texttt{TransceiverClass} & \texttt{object} & \texttt{bool} & Il campo assume esclusivamente i valori \texttt{A} (dispositivi SOLAS, Classe A) o \texttt{B} (imbarcazioni minori). Rinominato in \texttt{IsClassA} e convertito in booleano. \\
+\texttt{BaseDateTime} & \texttt{object} & \texttt{datetime64} & Conversione da stringa a tipo temporale nativo di Pandas per consentire operazioni aritmetiche su timestamp. \\
+\hline
+\end{tabular}
+\end{table}
+
+
+
+
+\section{Implementazione del framework TREAD e differenze rispetto all'originale}
+\label{sec:meth_algorithm}
+
+\subsection{Architettura generale}
+
+Il framework TREAD di Pallotta et al.~\cite{pallotta} si articola in due macro fasi: \emph{Knowledge Discovery} e \emph{Knowledge Exploitation}.
+Nella prima fase, il flusso di messaggi AIS viene elaborato per costruire un modello statistico del traffico normale, articolato in tre classi
+di oggetti: vessel objects ($Vs$), waypoint objects ($WPS$) e route objects ($Rs$).
+Nella seconda fase, le rotte apprese vengono utilizzate per classificare nuove traittorie e individuare comportamenti anomali.
+
+La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il processo non è incrementale in senso stretto:
+anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
+e processato in batch. Questa scelta è stata motivata dai vincoli hardware descritti nella sezione~\ref{sec:meth_limits}.
+
+
+
+
+
+
+
 Per ognuno dei punti seguenti prevedo una sezione dedicata
 
 - Spiego qual'è l'obiettivo (vedere se l'algoritmo di pallotta è ancora applicabile e se si può migliorare)

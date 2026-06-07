@@ -59,27 +59,69 @@ l’utilizzo di tecniche automatiche di analisi dei dati.
 
 % ─────────────────────────────────────────────
 \section{Panoramica degli approcci di anomaly detection}
-\label{sec}
+\label{sec:panoramica}
 
-La letteratura sull’anomaly detection nei dati AIS è stata raccolta, ad esempio, in \cite{riassuntone}, 
-che prende in esame diversi contributi pubblicati tra il 2007 e il 2021. Un elemento ricorrente è la 
-distinzione tra una fase iniziale di modellazione del traffico normale e una successiva fase di 
-individuazione delle anomalie.
+La letteratura sull'anomaly detection nei dati AIS è stata raccolta e 
+sistematizzata da~\cite{riassuntone}, che analizza 44 contributi pubblicati 
+tra il 2007 e il 2021.
+Prima di esplorare i possibili approcci risolutivi, è utile adottare un'opportuna
+classificazione delle potenziali anomalie da rilevare tramite l'analisi dei dati AIS.
+Nell'ambito di questo lavoro di tesi tale classificazione viene presa da~\cite{lane2010}.
 
-Le tecniche proposte vengono generalmente suddivise in tre macro-categorie: 
-\textbf{Machine Learning}, \textbf{Stocastici} e \textbf{Geometrici}, 
-a cui si aggiungono approcci ibridi che combinano più metodologie.
+Di seguito le 5 tipologie di anomalie:
 
-Per quanto riguarda la tipologia di anomalie, si fa riferimento alla classificazione proposta da Lane et al. 
-\cite{lane2010}, che distingue diverse forme di comportamento anomalo. 
-Tra queste, la più studiata è la \textit{route deviation}, che rappresenta anche il focus del presente lavoro.
+\begin{enumerate}
+    \item \textbf{Deviazione dalla rotta} (\textit{route deviation}):
+        la nave percorre un tragitto insolito rispetto alla rotta tipicamente
+        più breve tra due porti, compatibilmente con i vincoli fisici e normativi.
+        È la tipologia di anomalia più studiata in letteratura~\cite{riassuntone} e rappresenta
+        il focus principale di questo lavoro.
+ 
+    \item \textbf{Attività AIS inaspettata} (\textit{unexpected AIS activity}):
+        comprende l'accensione o lo spegnimento improvviso del
+        transponder AIS  (che può indicare il tentativo di nascondere
+        la posizione della nave) nonché la modifica dei dati
+        identificativi trasmessi, come il nome o codice identificativo MMSI.
+
+    \item \textbf{Arrivo in porto inaspettato} (\textit{unexpected port arrival}):
+        una nave approda in un porto non previsto o incoerente rispetto
+        alla destinazione dichiarata o alla rotta storica. Questo
+        comportamento può essere indicativo di attività illecite quali il
+        contrabbando o l'evasione dei controlli doganali.
+ 
+    \item \textbf{Avvicinamento ravvicinato} (\textit{close approach}):
+        due navi si portano a distanza molto ridotta l'una dall'altra al di fuori
+        di contesti giustificati (ad esempio le aree portuali), 
+        il che potrebbe indicare un passaggio non dichiarato
+        di merci o persone.
+
+    \item \textbf{Ingresso in zona} (\textit{zone entry}):
+        una nave entra in un'area geografica soggetta a restrizioni,
+        sorveglianza speciale o nota per attività illegali (ad esempio
+        zone di pesca protette o aree riservate a determinate imbarcazioni).
+\end{enumerate}
+
+Per ciascuna di queste categorie, Lane et al.~\cite{lane2010} propongono un algoritmo probabilistico,
+i cui output vengono poi aggregati tramite una rete bayesiana per ottenere una stima complessiva della 
+probabilità che una anomalia sia effettivamente in corso.
+
+Nel resoconto prodotto dall'analisi sistematica condotta da~\cite{riassuntone} sui vari approcci risolutivi, 
+si evince come la maggior parte dei contributi adotta una struttura in due fasi: 
+prima viene costruito un modello del traffico normale a partire dai dati storici,
+poi si identificano le traiettorie che si discostano da quel modello come potenziali anomalie.
+
+Infine, i lavori esaminati vengono classificati in tre macro categorie principali, a cui si aggiungono approcci ibridi che combinano
+più metodologie.
 
 \subsection{Approcci di Machine Learning}
 
 Gli approcci basati su machine learning comprendono principalmente metodi di clustering e reti neurali. 
 Tra i primi, DBSCAN è particolarmente diffuso, in quanto si adatta bene alla natura spaziale dei dati e 
-consente di identificare cluster senza specificarne a priori il numero \cite{pallotta}. 
-Le traiettorie che non appartengono ad alcun cluster vengono generalmente considerate anomale.
+consente di identificare cluster senza specificarne a priori il numero. Un esempio rappresentativo è il framework TREAD
+di Pallotta et al.~\cite{pallotta}, che applica l'algoritmo DBSCAN in maniera incrementale per individuare i
+"waypoint" caratteristici del traffico (principalmente porti, piattaforme offshore, punti di ingresso e uscita
+dall'area monitorata). Le nuove rotte vengono confrontate con il modello appreso e, se la sua probabilità rispetto
+alle rotte note risulta bassa, viene scartata.
 
 Le reti neurali, invece, permettono di modellare relazioni più complesse e non lineari, 
 e nelle versioni più recenti hanno mostrato buone prestazioni.
@@ -98,23 +140,39 @@ classificano come anomale quelle con bassa probabilità.
 Offrono una buona base teorica e permettono di quantificare l’incertezza, ma possono risultare onerosi 
 dal punto di vista computazionale su dataset molto grandi.
 
-Alcuni lavori, come \cite{kowalska}, mostrano l’efficacia dei Gaussian Process, 
-mentre le reti bayesiane risultano interessanti per la loro maggiore interpretabilità, 
-pur presentando difficoltà di scalabilità \cite{mascaro}.
+Alcuni lavori, come~\cite{kowalska}, mostrano l’efficacia dei Gaussian Process.
+In particolare nel loro lavoro Kowalska et al. propongono un modello non parametrico basato su un Gaussian Process per apprendere
+il comportamento normale delle navi a partire dai dati AIS. Il loro modello assegna a ciascuna trasmissione ricevuta 
+una misura di normalità in funzione della velocità osservata rispetto alla posizione geografica:
+le navi con comportamento inusuale ottengono uno score elevato e vengono prioritizzate per un'analisi più approfondita.
+Per rendere il metodo applicabile a dataset di grandi dimensioni, gli autori introducono una strategia di
+"active learning" che seleziona automaticamente un sottoinsieme informativo dei dati per
+l'addestramento, riducendo il costo computazionale senza compromettere le prestazioni.
+
+Mascaro et al.~\cite{mascaro} mostrano invece come le reti bayesiane possano essere interessanti per la
+loro maggiore interpretabilità, pur presentando difficoltà di scalabilità.
+In particolare, nel loro lavoro, apprendono reti bayesiane direttamente dai dati AIS, producendo
+modelli dinamici (che catturano l'evoluzione della traiettoria passo dopo passo) e 
+modelli statici basati su un riassunto dell'intera rotta. I due approcci mostrano punti di forza
+complementari: il modello dinamico risulta più efficace nel rilevare anomalie localizzate nel
+tempo, mentre quello statico cattura meglio pattern anomali che si manifestano sull'intera
+traiettoria. La loro combinazione migliora le prestazioni complessive di rilevamento rispetto
+all'uso di uno solo dei due.
+
 
 \subsection{Approcci Geometrici}
 
 Gli approcci geometrici si basano sulle proprietà spaziali delle traiettorie, 
-ad esempio tramite il calcolo del convex hull (inviluppo convessp) delle rotte osservate \cite{riassuntone}. 
+ad esempio tramite il calcolo del convex hull (inviluppo convesso) delle rotte osservate \cite{riassuntone}. 
 Si tratta in genere di metodi semplici e interpretabili, ma meno flessibili e meno robusti in presenza di 
 rumore rispetto ad altri approcci.
 
 % ─────────────────────────────────────────────
 \section{Il framework TREAD di Pallotta et al.}
-\label{sec}
+\label{sec:tread}
 
 Tra gli approcci presenti in letteratura, il metodo adottato in questo lavoro è il framework TREAD 
-(Traffic Route Extraction and Anomaly Detection) proposto da \cite{pallotta}, 
+(Traffic Route Extraction and Anomaly Detection) proposto da~\cite{pallotta}, 
 che combina tecniche di clustering e analisi statistica.
 
 Il framework è non supervisionato e incrementale: apprende i pattern di traffico direttamente dai dati AIS 
