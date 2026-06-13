@@ -76,15 +76,22 @@ un messaggio e l'altro, e attributi dinamici, che riflettono lo stato corrente d
 \end{tabular}
 \end{table}
 
+Ogni record del dataset, contenendo una coppia di coordinate geografiche (\texttt{LAT}, \texttt{LON}),
+è rappresentabile come un punto su una mappa. A ciascun punto è inoltre associato un vettore di movimento:
+il modulo corrisponde alla velocità istantanea della nave (\texttt{SOG}), mentre la direzione è determinata
+dall'angolo \texttt{COG}, espresso in gradi rispetto al nord geografico. Questa rappresentazione --- punto
+più vettore --- è alla base delle elaborazioni descritte nelle sezioni successive, ed è il motivo per cui
+nel resto del capitolo i termini \emph{record} e \emph{punto} vengono usati in modo intercambiabile.
+
+
 \subsection{Qualità dei dati}
 \label{ssec:meth_dataset_quality}
 
 Oltre alla struttura, è opportuno considerare la qualità intrinseca dei dati. Un vantaggio rilevante del dataset NOAA
 rispetto ad altre fonti pubbliche (in particolare i dati danesi considerati e poi scartati in fase esplorativa) è che
 i dati sono già stati filtrati dagli errori più grossolani, rendendo l'uso di tecniche di pulizia aggiuntive meno
-critico. È stata tuttavia mantenuta l'assunzione esplicita che le colonne \texttt{MMSI}, \texttt{BaseDateTime},
-\texttt{LAT}, \texttt{LON} siano affidabili e prive di errori, in quanto queste quattro colonne costituiscono
-la base di tutte le elaborazioni successive.
+critico. È stata tuttavia mantenuta l'assunzione esplicita che le colonne \texttt{MMSI} e \texttt{BaseDateTime} 
+siano affidabili e prive di errori, in quanto queste quattro colonne costituiscono la base di tutte le elaborazioni successive.
 
 % -----------------------------------------------------------------------
 \section{Pre-processing dei dati}
@@ -106,7 +113,6 @@ di Pandas) supporta il multithreading nativamente.
 
 In una fase successiva, i record esattamente duplicati (identici in ogni attributo) vengono rimossi, lasciandone solo uno per ogni gruppo duplicato.
 
-
 Viene poi rimosso un ulteriore sottoinsieme di record: quelli generati da navi, la cui somma di record presenti nel database è inferiore
 al 10\% della media calcolata sul totale delle navi presenti. 
 Per identificare l'appartenenza di un record ad una nave o meno, è stato utilizzato il valore di \texttt{MMSI}. Come citato in precedenza alla
@@ -118,6 +124,206 @@ le navi al di sotto di questa soglia contribuiscono in maniera trascurabile al t
 distorcere la fase di clustering.
 Prima dell'applicazione di questa soglia il dataset conteneva 602 imbarcazioni distinte (5.460.800 record). In seguito il numero di 
 navi distinte è passato a 403 (5.415.168 righe), eliminando circa lo 0,84\% dei record totali. 
+
+\subsection{Calcolo della velocità media e classificazione degli stati}
+\label{ssec:meth_status}
+ 
+Una volta completata la fase di importazione e pulizia, l'analisi viene condotta su una nave alla volta utilizzando
+il valore di \texttt{MMSI} come chiave primaria.
+Per ciascuna nave viene costruito un \texttt{DataFrame} separato, ordinato cronologicamente per \texttt{BaseDateTime} e contenente
+tutti messaggi che quell'imbarcazione ha generato nel periodo di analisi all'interno dell'area geografica analizzata.
+Per ogni coppia di punti consecutivi appartenenti alla stessa nave viene calcolata la velocità media \texttt{Avg\_Speed},
+come rapporto tra la distanza percorsa e l'intervallo di tempo trascorso. La distanza viene calcolata sfruttando la formula
+della \emph{Great-Circle Distance}, che tiene conto della curvatura terrestre usando come raggio della Terra il raggio equatoriale definitio
+dallo standard WGS-84 e pari a 6\,378\,137 m. La velocità risultante viene convertita in nodi nautici.
+ 
+Il calcolo viene gestito in modo vettorizzato: ogni traiettoria viene rappresentata come due sequenze di punti sfalsate
+di un passo, ottenendo le coppie (punto precedente, punto corrente). Nei casi in cui l'intervallo di tempo
+tra due punti consecutivi supera la soglia \texttt{LOST\_TIME\_THRESHOLD\_SECONDS} (impostata a 620 s e corrispondente
+a circa 10 volte il periodo tipico di trasmissione di un dispositivo AIS di Classe A), la velocità media calcolata
+viene scartata e sostituita con il valore di \texttt{SOG}, a condizione che quest'ultimo sia plausibile (inferiore
+alla soglia \texttt{ABSURD\_SPEED\_THRESHOLD} di 102 nodi). In caso contrario, la velocità viene ricalcolata
+ancora come rapporto distanza/tempo. Al primo punto di ogni traiettoria, per il quale non esiste un punto
+precedente, viene assegnato direttamente il valore di \texttt{SOG}. I punti con \texttt{Avg\_Speed} superiore
+a 102 nodi vengono eliminati, in quanto ritenuti il risultato di errori di posizionamento GPS.
+ 
+A partire da \texttt{Avg\_Speed}, viene costruita la colonna \texttt{EstimatedStatus}, che classifica ogni punto
+in una delle sei categorie seguenti. Le prime quattro riguardano la gestione dei gap temporali e vengono
+assegnate durante il calcolo della velocità:
+ 
+\begin{itemize}
+    \item \textbf{lost}: punto immediatamente precedente un gap temporale superiore a \texttt{LOST\_TIME\_THRESHOLD\_SECONDS}.
+          Indica l'ultimo momento in cui la nave era tracciata prima di scomparire temporaneamente dal sistema.
+    \item \textbf{return}: primo punto successivo a tale gap. Indica il momento in cui la nave torna visibile
+          dopo una breve interruzione. I punti \emph{lost} e \emph{return} non entrano nella fase di clustering,
+          ma sono utili per la corretta interpretazione delle traiettorie.
+    \item \textbf{exit}: punto immediatamente precedente un gap superiore a \texttt{EXIT\_TIME\_THRESHOLD\_HOURS}
+          (12 ore). Indica che la nave ha lasciato l'universo di analisi o ha smesso di trasmettere per un periodo
+          prolungato.
+    \item \textbf{entry}: primo punto successivo a tale gap. Indica il rientro della nave nell'universo di analisi
+          dopo un'assenza significativa.
+\end{itemize}
+ 
+Gli status \emph{exit} e \emph{entry} vengono assegnati dopo \emph{lost} e \emph{return}, sovrascrivendoli quando
+il gap supera la soglia più lunga.
+Le restanti due categorie vengono assegnate in una seconda fase, sui punti che non hanno ancora ricevuto uno status:
+ 
+\begin{itemize}
+    \item \textbf{stationary}: punti con \texttt{Avg\_Speed} $\leq$ \texttt{SPEED\_THRESHOLD} (0.5 nodi).
+    \item \textbf{sailing}: tutti i punti rimanenti, in navigazione ordinaria.
+\end{itemize}
+ 
+Al termine, il primo punto di ciascuna traiettoria viene forzato a \emph{entry} e l'ultimo a \emph{exit},
+indipendentemente dallo status calcolato. Quando più punti consecutivi risultano tutti \emph{entry} o tutti
+\emph{exit} (situazione possibile in presenza di gap ravvicinati) viene conservato solo l'ultimo punto
+\emph{entry} della sequenza e il primo punto \emph{exit}, eliminando i rimanenti.
+
+%-----------------------------------------------------------------------------------------------------------
+\section{Implementazione del framework TREAD e differenze rispetto all'originale}
+\label{sec:meth_algorithm}
+
+\subsection{Architettura generale}
+
+Il framework TREAD di Pallotta et al.~\cite{pallotta} si articola in due macro fasi: \emph{Knowledge Discovery} e \emph{Knowledge Exploitation}.
+Nella prima fase, il flusso di messaggi AIS viene elaborato per costruire un modello statistico del traffico normale, articolato in tre classi
+di oggetti: vessel objects ($Vs$), waypoint objects ($WPS$) e route objects ($Rs$).
+Nella seconda fase, le rotte apprese vengono utilizzate per classificare nuove traittorie e individuare comportamenti anomali.
+
+La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il processo non è incrementale in senso stretto:
+anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
+e processato in batch. Questa scelta è stata motivata dai vincoli hardware descritti nella sezione~\ref{sec:meth_limits}.
+
+
+\subsection{Identificazione dei waypoint: DBSCAN e H-DBSCAN}
+\label{ssec:meth_clustering}
+
+Il passo centrale della fase di Knowledge Discovery è l'identificazione dei waypoint. In questo
+contesto, un waypoint è un'area geografica appartenente all'universo di analisi in cui le navi:
+\begin{itemize}
+    \item entrano nell'universo di analisi;
+    \item escono dall'universo di analisi;
+    \item rallentano significativamente, con velocità media inferiore alla soglia
+          \texttt{SPEED\_THRESHOLD} (0.5 nodi), al di sotto della quale la nave è ritenuta
+          sostanzialmente stazionaria.
+\end{itemize}
+A differenza di quanto avviene su terra, in mare è molto difficile per una nave
+rimanere completamente ferma per via di correnti, vento e onde che spesso causano qualche tipo di movimento. 
+Per questo motivo, anziché cercare punti di velocità nulla, si è deciso di introdurre una soglia
+(\texttt{SPEED\_THRESHOLD}) sotto la quale un imbarcazione è considerata stazionaria. 
+I waypoint non hanno dimensione fissa: ciascuno occupa una porzione dello spazio geografico 
+determinata da come si distribuiscono e da quanti sono i punti che lo compongono. Nella pratica, la maggior parte di essi 
+tende ad occupare un'area molto ridotta rispetto all'universo di analisi.
+Nell'algoritmo originale l'identificazione dei waypoint viene effettuata tramite un approccio basato su DBSCAN.
+La presente implementazione applica prima DBSCAN e poi H-DBSCAN come variante
+migliorativa (\emph{Hierarchical DBSCAN}).
+
+\subsubsection{Preparazione degli input per il clustering}
+ 
+L'input fornito agli algoritmi di clustering è costituito da tutti i punti classificati come 
+\emph{stationary}, \emph{entry} o \emph{exit}, che rappresentano circa il 65,3\% del dataset totale.
+
+Per ridurre la dimensione dell'input e superare le limitazioni di memoria dell'implementazione scikit-learn di DBSCAN, 
+il cui costo di memoria è $O(n^2)$, i punti vengono aggregati tramite un'operazione di \emph{group-by} sulle sole coordinate GPS, 
+contando quante volte ogni coppia (\texttt{LAT}, \texttt{LON}) compare nel dataset. Questa operazione è il motivo per cui si è deciso
+di arrotondare da 5 a 4 cifre decimali i valori di latitudine e longitudine (vedi Tabella~\ref{tab:dtype_optimization}). così
+facendo si riduce il numero di coppie distinte in input all'algoritmo di clustering.
+Il conteggio risultante viene interpretato come un \emph{peso} di ciascuna coordinata. 
+Per attenuare lo sbilanciamento tra coordinate molto visitate e coordinate rare, i pesi vengono normalizzati applicando 
+il logaritmo in base 2; le coordinate con peso zero dopo la trasformazione logaritmica vengono riportate artificialmente a 1.
+
+
+\subsubsection{DBSCAN}
+ 
+L'algoritmo DBSCAN viene eseguito con i parametri $\varepsilon = 0.075$ e $N_{min} = 10$, scelti empiricamente 
+in modo da produrre cluster geograficamente coerenti con i porti e i punti di passaggio dell'arcipelago delle Hawaii. 
+Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferimento per il confronto con la variante H-DBSCAN.
+
+\subsubsection{H-DBSCAN}
+ 
+Il motivo principale per introdurre H-DBSCAN è la sua capacità di identificare cluster di densità variabile, cosa che DBSCAN non 
+riesce a gestire bene \cite{schubert2017}. 
+Il traffico nelle Hawaii presenta una densità fortemente eterogenea: i porti principali come Honolulu hanno concentrazioni 
+di punti molto più elevate rispetto a zone di passaggio o porti minori. 
+In questo contesto, i parametri fissi di DBSCAN tendono a sovra-segmentare le aree sparse o a fondere artificialmente cluster distinti 
+nelle aree dense.
+ 
+Poiché la libreria \texttt{hdbscan}\footnote{Libreria esterna \texttt{hdbscan} (\url{https://github.com/scikit-learn-contrib/hdbscan}), 
+distinta dall'implementazione inclusa in scikit-learn.} non consente di associare i pesi ad ogni punto ma li considera tutti equiponderati, 
+la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso logaritmico. 
+La tabella espansa conta circa 68.000 righe, una dimensione che consente l'esecuzione in poche decine di secondi. 
+H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
+e $\text{cluster\_selection\_epsilon} = 0.01$.
+
+\subsection{Costruzione dei waypoint e identificazione delle rotte}
+\label{ssec:meth_routes}
+ 
+Una volta determinati i cluster tramite H-DBSCAN, per ciascun cluster viene calcolato il \emph{convex hull} (inviluppo convesso) 
+tramite \texttt{scipy.spatial.ConvexHull}. L'inviluppo convesso di ogni cluster definisce il perimetro del waypoint corrispondente, 
+rappresentato come un poligono tramite la libreria Shapely.
+ 
+Per ogni punto del dataset viene quindi verificato se esso ricade all'interno di uno dei poligoni waypoint, 
+informazione salvata nella colonna \texttt{IsInWP}. 
+Un waypoint è considerato \emph{significativo} per un dato punto se quest'ultimo soddisfa almeno una delle condizioni seguenti: 
+\texttt{Avg\_Speed} $\leq$ \texttt{SPEED\_THRESHOLD}, oppure il suo \texttt{EstimatedStatus} è \emph{entry} o \emph{exit}.
+
+
+L'assegnazione delle rotte avviene una nave alla volta, all'interno di ogni coppia
+(\emph{entry}, \emph{exit}) identificata nel dataset. A ogni punto viene assegnata
+un'etichetta secondo la seguente logica:
+\begin{itemize}
+    \item se il punto si trova all'interno di un waypoint significativo, l'etichetta
+          corrisponde al nome di quel waypoint;
+    \item se il punto si trova in navigazione tra due waypoint, l'etichetta assume il
+          formato \texttt{WP\_X -- WP\_Y}, dove \texttt{WP\_X} e \texttt{WP\_Y} sono
+          rispettivamente il waypoint di provenienza e quello di destinazione; nei casi
+          in cui uno o entrambi non siano identificabili, viene utilizzato il
+          segnaposto \texttt{<NA>}.
+\end{itemize}
+
+Con queste ultime operazioni, termina la fase di Knowledge Discovery: ogni punto
+del dataset ha associata un'etichetta di rotta secondo i criteri appena descritti, e il
+modello di traffico appreso è pronto per essere utilizzato nella fase di Knowledge
+Exploitation.
+
+% -----------------------------------------------------------------------
+\section{Anomaly detection}
+\label{sec:meth_anomaly}
+ 
+Prima di descrivere la fase di anomaly detection, è opportuno introdurre due concetti
+fondamentali. Una \textbf{rotta} è un'entità astratta che modella il fatto che almeno una volta una 
+nave ha viaggiato dal waypoint di partenza a quello di arrivo (e non il viceversa).
+Ipotizzando di modellare i waypoint come nodi di un grafo orientato, una rotta sarebbe uno degli archi.
+Un \textbf{trip} indica invece il singolo viaggio compiuto da una specifica nave lungo una rotta. 
+A ogni rotta possono quindi essere associati più trip, tanti quante sono le navi che l'hanno percorsa nel
+periodo analizzato.
+
+La fase di anomaly detection segue le equazioni del framework TREAD originale \cite{pallotta2013}.
+ L'analisi si concentra su una singola rotta selezionata (una delle più trafficate tra quelle estratte nella fase precedente) 
+ e utilizza i trip associati a tale rotta come unità di analisi
+ 
+\subsection{Decomposizione della velocità e preparazione delle feature}
+ 
+Per ogni punto del dataset vengono calcolate le componenti cartesiane della velocità $V_x$
+e $V_y$ a partire da \texttt{SOG} e \texttt{COG}. Il COG, espresso in gradi rispetto al
+nord geografico (angolo \emph{bearing}), viene convertito in angolo aritmetico standard
+tramite la formula $\theta = (450 - \text{COG}) \mod 360$, e poi in radianti. Le componenti
+risultanti sono:
+\[
+V_x = \text{SOG} \cdot \cos(\theta), \qquad V_y = \text{SOG} \cdot \sin(\theta)
+\]
+Pallotta et al.\ \cite{pallotta2013} propongono un approccio alternativo per il calcolo
+delle stesse componenti, basato sulla funzione arcotangente e sul teorema di Pitagora.
+Questo approccio presenta alcune criticità. In primo luogo, la funzione arcotangente è
+definita a meno di un'ambiguità di segno: per ricavare il quadrante corretto della
+direzione è necessario gestire esplicitamente i casi in cui $V_x$ e $V_y$ assumono segno
+negativo, introducendo logica condizionale aggiuntiva. In secondo luogo, l'uso combinato
+di arcotangente e radice quadrata è computazionalmente più oneroso rispetto al calcolo
+diretto tramite seno e coseno. Infine, l'approccio inverso introduce potenziali errori
+numerici nelle situazioni limite, come velocità molto prossime a zero, in cui il rapporto
+tra le componenti diventa instabile. Per questi motivi, nella presente implementazione si
+è preferito calcolare $V_x$ e $V_y$ direttamente tramite seno e coseno dell'angolo
+$\theta$, ottenendo un codice più semplice ed efficiente.
+
 
 
 \begin{table}[ht]
@@ -145,25 +351,6 @@ navi distinte è passato a 403 (5.415.168 righe), eliminando circa lo 0,84\% dei
 \hline
 \end{tabular}
 \end{table}
-
-
-
-
-\section{Implementazione del framework TREAD e differenze rispetto all'originale}
-\label{sec:meth_algorithm}
-
-\subsection{Architettura generale}
-
-Il framework TREAD di Pallotta et al.~\cite{pallotta} si articola in due macro fasi: \emph{Knowledge Discovery} e \emph{Knowledge Exploitation}.
-Nella prima fase, il flusso di messaggi AIS viene elaborato per costruire un modello statistico del traffico normale, articolato in tre classi
-di oggetti: vessel objects ($Vs$), waypoint objects ($WPS$) e route objects ($Rs$).
-Nella seconda fase, le rotte apprese vengono utilizzate per classificare nuove traittorie e individuare comportamenti anomali.
-
-La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il processo non è incrementale in senso stretto:
-anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
-e processato in batch. Questa scelta è stata motivata dai vincoli hardware descritti nella sezione~\ref{sec:meth_limits}.
-
-
 
 
 
