@@ -10,11 +10,11 @@
 \usepackage[numbers]{natbib}    % For bibliography
 \usepackage{hyperref}  % For clickable links
 \usepackage{fancyhdr} % For headers and footers
-\setlength{\headheight}{14.5pt}
-\addtolength{\topmargin}{-2.5pt}
+\setlength{\headheight}{27.2pt}
+\addtolength{\topmargin}{-12.62pt}
 \usepackage{setspace} % For "interlinea"
 % english language package
-\usepackage[english]{babel}
+\usepackage[english,italian]{babel}
 % Page margins
 \usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 
@@ -35,6 +35,11 @@
 \fancyhead[LE,RO]{\thepage}
 \fancyhead[LO]{\leftmark}
 \fancyhead[RE]{\rightmark}
+
+% posizionamento tabella in pagina vuota
+\makeatletter
+\setlength{\@fptop}{0pt}
+\makeatother
 
 \begin{document}
 
