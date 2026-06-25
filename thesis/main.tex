@@ -4,21 +4,26 @@
 % Packages
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
+\usepackage[main=italian, english]{babel}
+\usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 \usepackage{graphicx}  % For images
 \usepackage{booktabs}  % For professional tables
 \usepackage{amsmath,amssymb}  % For math
 \usepackage[numbers]{natbib}    % For bibliography
-\usepackage{hyperref}  % For clickable links
 \usepackage{fancyhdr} % For headers and footers
+\usepackage{setspace} % For "interlinea"
+\usepackage{hyperref}
+\graphicspath{{images/}}
+
+
+
 \setlength{\headheight}{27.2pt}
 \addtolength{\topmargin}{-12.62pt}
-\usepackage{setspace} % For "interlinea"
-% english language package
-\usepackage[english,italian]{babel}
-% Page margins
-\usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
 
-\usepackage{hyperref}
+
+% Page margins
+
+
 
 % Custom commands (probably useless)
 \newcommand{\universityname}{Università degli Studi di Bergamo}
@@ -27,7 +32,7 @@
 \newcommand{\thesistitle}{XXXXXX TITOLO TESI XXXXXXX}
 \newcommand{\thesisauthor}{Federico Panzeri}
 \newcommand{\thesisyear}{2025}
-\newcommand{\supervisorname}{Prof.\Mirko\Mazzoleni}
+\newcommand{\supervisorname}{Prof.~Mirko Mazzoleni}
 
 % Page styles
 \pagestyle{fancy}
@@ -47,8 +52,7 @@
 \input{sections/frontmatter/0_titlepage}
 
 % Set 1,5 spacing for the rest of the document
-\onehalfspacing
-% Front matter
+\onehalfspacing% Front matter
 \clearpage % force a page break
 \pagenumbering{roman}
 
@@ -81,7 +85,7 @@
 
 % Bibliography
 \nocite{*} %adds all bibliography to the main file
-\bibliographystyle{plainnat}
+\bibliographystyle{unsrtnat}
 \bibliography{bibliography}
 
 % Appendices (if any)

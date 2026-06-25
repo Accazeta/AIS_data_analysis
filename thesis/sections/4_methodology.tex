@@ -34,6 +34,15 @@ sull'area delle Hawaii tramite una bounding box le cui estremità hanno le segue
     \item Longitudine: da $160.11^\circ$W a $154.39^\circ$W.
 \end{itemize}
 
+La figura~\ref{fig:NOAA_selection} mostra un passaggio della fase di scaricamento dei dati dal portale del NOAA\@. 
+Si può vedere su mappa il rettangolo descritto dalle coordinate di latitudine e longitudine di cui sopra.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Methodology/NOAA_AIS_square.PNG}
+    \caption{Portale NOAA \textit{AccessAIS} per il download di dati AIS.}\label{fig:NOAA_selection}
+\end{figure}
+
 \subsection{Struttura del dataset}\label{ssec:meth_dataset_structure}
 
 Ogni record del dataset corrisponde a un singolo messaggio AIS trasmesso da una nave e contiene diversi campi, riportati nella tabella~\ref{tab:dataset_columns}.
@@ -78,6 +87,15 @@ dall'angolo \texttt{COG}, espresso in gradi rispetto al nord geografico. Questa 
 è alla base delle elaborazioni descritte nelle sezioni successive, ed è il motivo per cui
 nel resto del capitolo i termini \emph{record} e \emph{punto} vengono usati in modo intercambiabile.
 
+In figura~\ref{fig:Estratto_dataset} è possibile vedere un esempio dei dati contenuti nelle colonne
+\texttt{MMSI, BaseDateTime, LAT, LON, SOG, COG, Heading, VesselName, IMO}  
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Methodology/Estratto_dataset.png}
+    \caption{Estratto del dataset di partenza.}\label{fig:Estratto_dataset}
+\end{figure}
+
 
 \subsection{Qualità dei dati}\label{ssec:meth_dataset_quality}
 
@@ -85,7 +103,7 @@ Oltre alla struttura, è opportuno considerare la qualità intrinseca dei dati. 
 rispetto ad altre fonti pubbliche (in particolare i dati danesi considerati e poi scartati in fase esplorativa) è che
 i dati sono già stati filtrati dagli errori più grossolani, rendendo l'uso di tecniche di pulizia aggiuntive meno
 critico. È stata tuttavia mantenuta l'assunzione esplicita che le colonne \texttt{MMSI} e \texttt{BaseDateTime} 
-siano affidabili e prive di errori, in quanto queste quattro colonne costituiscono la base di tutte le elaborazioni successive.
+siano affidabili e prive di errori, in quanto queste due colonne costituiscono la base di tutte le elaborazioni successive.
 
 % -----------------------------------------------------------------------
 \section{Pre-processing dei dati}\label{sec:meth_preprocessing}
@@ -112,24 +130,70 @@ Per identificare l'appartenenza di un record ad una nave o meno, è stato utiliz
 sezione~\ref{ssec:meth_dataset_quality}, tale attributo si assume corretto e validato dal NOAA in fase di raccolta dei dati.
 
 La soglia usata per rimuovere le navi meno attive è calcolata dinamicamente (e non come valore fisso) in modo
-da rendere il codice indipendente dalle dimensioni del dataset che si decide di utilizzare. L'idea dietro questa decisione è che
-le navi al di sotto di questa soglia contribuiscono in maniera trascurabile al traffico dell'area e la loro presenza potrebbe 
+da rendere il codice indipendente dalle dimensioni del dataset che si decide di utilizzare. L'idea dietro la decisione di rimuovere queste navi
+ è che, al di sotto di questa soglia, non contribuiscono in maniera significativa al traffico dell'area e la loro presenza potrebbe 
 distorcere la fase di clustering.
-Prima dell'applicazione di questa soglia il dataset conteneva 602 imbarcazioni distinte (5.460.800 record). In seguito il numero di 
-navi distinte è passato a 403 (5.415.168 righe), eliminando circa lo 0,84\% dei record totali. 
+Prima dell'applicazione di questa soglia il dataset conteneva 781 imbarcazioni distinte (9.458.822 record). In seguito il numero di 
+navi distinte è passato a 494 (9.383.271 righe), eliminando 287 vascelli (circa un terzo delle imbarcazioni di partenza) che costituivano 
+solo lo 0,79\% dei record totali. 
+
+\subsection{Ottimizzazione della memoria}\label{ssec:meth_memory}
+
+Il dataset pulito viene riletto in Pandas per le elaborazioni successive. Per ridurre il
+consumo di memoria (il dataset occupa circa 708 MB nella rappresentazione di default)
+i tipi di dato delle colonne vengono convertiti nelle rappresentazioni più compatte
+compatibili con i limiti tecnici definiti dalla normativa ITU-R M.1371-6~\cite{itu2026},
+che specifica la codifica binaria di ciascun campo del messaggio AIS\@.
+La Tabella~\ref{tab:dtype_optimization} riassume le conversioni effettuate con la relativa
+giustificazione.
+
+\begin{table}[htbp]
+\centering
+\caption{Ottimizzazione dei tipi di dato.}\label{tab:dtype_optimization}
+\begin{tabular}{lllp{5.5cm}}
+\toprule
+\textbf{Colonna} & \textbf{Tipo originale} & \textbf{Nuovo tipo} & \textbf{Motivazione} \\
+\midrule
+\texttt{MMSI} & \texttt{int64} & \texttt{int32} & Codificato su 30 bit; valori fino a 999\,999\,999. Un \texttt{int32} ($\approx 2.1 \times 10^9$) è sufficiente. \\
+\texttt{LAT} & \texttt{float64} & \texttt{float64}$^{(a)}$ & Tipo invariato. I valori vengono arrotondati a 4 cifre decimali ($\approx 10$ m di risoluzione) per ridurre il numero di coordinate distinte nelle operazioni di group-by. \\
+\texttt{LON} & \texttt{float64} & \texttt{float64}$^{(a)}$ & Stessa giustificazione di \texttt{LAT}. \\
+\texttt{SOG} & \texttt{float64} & \texttt{float64} & Tipo invariato. \\
+\texttt{COG} & \texttt{float64} & \texttt{float64} & Tipo invariato. \\
+\texttt{Heading} & \texttt{float64} & \texttt{float64} & Tipo invariato. \\
+\texttt{VesselType} & \texttt{float64} & \texttt{int16}$^{(b)}$ & Formalmente 8 bit (0--255), ma il dataset NOAA presenta valori superiori. I \texttt{NaN} vengono sostituiti con 0. \\
+\texttt{Status} & \texttt{float64} & \texttt{int8} & Codificato su 4 bit (valori 0--15). I \texttt{NaN} vengono sostituiti con 99. \\
+\texttt{Length} & \texttt{float64} & \texttt{int16} & Valore massimo 511 m. I valori frazionari vengono troncati (errore $< 1$ m). I \texttt{NaN} vengono sostituiti con 0. \\
+\texttt{Width} & \texttt{float64} & \texttt{int16} & Stessa giustificazione di \texttt{Length}. \\
+\texttt{Draft} & \texttt{float64} & \texttt{float32} & Codificato su 8 bit con risoluzione di 0.1 m, massimo 25.5 m. \\
+\texttt{Cargo} & \texttt{float64} & \texttt{int16}$^{(b)}$ & Stessa giustificazione di \texttt{VesselType}. \\
+\texttt{TransceiverClass} & \texttt{object} & \texttt{bool} & Assume solo i valori \texttt{A} o \texttt{B}. Rinominato \texttt{IsClassA}. \\
+\texttt{BaseDateTime} & \texttt{object} & \texttt{datetime64[s]} & Conversione da object a tipo temporale nativo di Pandas. \\
+\midrule
+\multicolumn{4}{l}{\footnotesize $^{(a)}$ Tipo invariato; l'unica trasformazione è l'arrotondamento a 4 cifre decimali.} \\
+\multicolumn{4}{l}{\footnotesize $^{(b)}$ Scostamento dalla specifica ITU-R M.1371-6, giustificato dai valori presenti nel dataset NOAA.} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Le colonne \texttt{VesselName}, \texttt{IMO} e \texttt{CallSign} vengono convertite da
+\texttt{object} a \texttt{Pandas.StringDtype}. Questa operazione non produce un risparmio di
+memoria significativo, ma garantisce una gestione più corretta dei valori mancanti. Poiché
+queste tre colonne non vengono utilizzate nelle elaborazioni successive, non sono incluse
+in tabella. Grazie alle conversioni effettuate, il dataset si riduce da circa 708 MB a
+circa 468 MB, con un risparmio prossimo al 33\%.
 
 \subsection{Calcolo della velocità media e classificazione degli stati}\label{ssec:meth_status}
  
 Una volta completata la fase di importazione e pulizia, l'analisi viene condotta su una nave alla volta utilizzando
-il valore di \texttt{MMSI} come chiave primaria.
+il valore di \texttt{MMSI} per distinguerle tra loro.
 Per ciascuna nave viene costruito un \texttt{DataFrame} separato, ordinato cronologicamente per \texttt{BaseDateTime} e contenente
 tutti messaggi che quell'imbarcazione ha generato nel periodo di analisi all'interno dell'area geografica analizzata.
 Per ogni coppia di punti consecutivi appartenenti alla stessa nave viene calcolata la velocità media \texttt{Avg\_Speed},
 come rapporto tra la distanza percorsa e l'intervallo di tempo trascorso. La distanza viene calcolata sfruttando la formula
 della \emph{Great-Circle Distance}, che tiene conto della curvatura terrestre usando come raggio della Terra il raggio equatoriale definito
 dallo standard WGS-84 e pari a 6\,378\,137 m. L'intervallo di tempo tra i due punti
-viene individuato facendo la differenza tra i due timestamp e sfruttando l'ordinamento cronologico applicato in precedenza.
- La velocità risultante viene convertita in nodi nautici.
+viene individuato facendo la differenza tra i due timestamp e sfruttando l'ordinamento cronologico applicato in precedenza. 
+La velocità risultante viene convertita in nodi nautici.
  
 Il calcolo viene gestito in modo vettorizzato: ogni traiettoria viene rappresentata come due sequenze di punti sfalsate
 di un passo, ottenendo le coppie (punto precedente, punto corrente). Nei casi in cui l'intervallo di tempo
@@ -139,7 +203,9 @@ viene scartata e sostituita con il valore di \texttt{SOG}, a condizione che ques
 alla soglia \texttt{ABSURD\_SPEED\_THRESHOLD} di 102 nodi). In caso contrario, la velocità viene ricalcolata
 ancora come rapporto distanza/tempo. Al primo punto di ogni traiettoria, per il quale non esiste un punto
 precedente, viene assegnato direttamente il valore di \texttt{SOG}. I punti con \texttt{Avg\_Speed} superiore
-a 102 nodi (e che non fanno scattare la soglia \texttt{LOST\_TIME\_THRESHOLD\_SECONDS}) vengono eliminati, in quanto ritenuti il risultato di errori di posizionamento GPS.
+a 102 nodi (e che non fanno scattare la soglia \texttt{LOST\_TIME\_THRESHOLD\_SECONDS}) vengono eliminati, 
+in quanto ritenuti il risultato di errori di posizionamento GPS\@. In totale dal dataset sono stati rimossi 7 record
+su 5.460.788 che ricadevano in quest'ultima casistica. 
  
 A partire da \texttt{Avg\_Speed}, viene costruita la colonna \texttt{EstimatedStatus}, che classifica ogni punto
 in una delle sei categorie seguenti. Le prime quattro riguardano la gestione dei gap temporali e vengono
@@ -168,7 +234,7 @@ Le restanti due categorie vengono assegnate in una seconda fase, sui punti che n
 \end{itemize}
  
 Al termine, il primo punto di ciascuna traiettoria viene forzato a \emph{entry} e l'ultimo a \emph{exit},
-indipendentemente dallo status calcolato. Quando più punti consecutivi risultano tutti \emph{entry} o tutti
+indipendentemente dallo status eventualmente già calcolato. Quando più punti consecutivi risultano tutti \emph{entry} o tutti
 \emph{exit} (situazione possibile in presenza di gap ravvicinati) viene conservato solo l'ultimo punto
 \emph{entry} della sequenza e il primo punto \emph{exit}, eliminando i rimanenti.
 
@@ -190,10 +256,10 @@ e processato in batch. Questa scelta è stata motivata dai vincoli hardware desc
 \subsection{Identificazione dei waypoint: DBSCAN e H-DBSCAN}\label{ssec:meth_clustering}
 
 Il passo centrale della fase di Knowledge Discovery è l'identificazione dei waypoint. In questo
-contesto, un waypoint è un'area geografica appartenente all'universo di analisi in cui le navi:
+contesto, un waypoint viene definito come un'area geografica appartenente all'universo di analisi in cui le navi:
 \begin{itemize}
-    \item entrano nell'universo di analisi;
-    \item escono dall'universo di analisi;
+    \item iniziano a manifestare la propria presenza nell'universo di analisi (entry);
+    \item cessano di manifestare la propria presenza nell'universo di analisi (exit);
     \item rallentano significativamente, con velocità media inferiore alla soglia
           \texttt{SPEED\_\allowbreak{}THRESHOLD} (0.5 nodi), al di sotto della quale la nave è ritenuta
           sostanzialmente stazionaria.
@@ -212,28 +278,36 @@ migliorativa (\emph{Hierarchical DBSCAN}).
 \subsubsection{Preparazione degli input per il clustering}
  
 L'input fornito agli algoritmi di clustering è costituito da tutti i punti classificati come 
-\emph{stationary}, \emph{entry} o \emph{exit}, che rappresentano circa il 65,3\% del dataset totale.
+\emph{stationary}, \emph{entry} o \emph{exit}, che rappresentano circa il 69,2\% del dataset totale.
 
 Per ridurre la dimensione dell'input e superare le limitazioni di memoria dell'implementazione scikit-learn di DBSCAN, 
 il cui costo di memoria è $O(n^2)$, i punti vengono aggregati tramite un'operazione di \emph{group-by} sulle sole coordinate GPS, 
 contando quante volte ogni coppia (\texttt{LAT}, \texttt{LON}) compare nel dataset. Questa operazione è il motivo per cui si è deciso
 di arrotondare da 5 a 4 cifre decimali i valori di latitudine e longitudine (vedi Tabella~\ref{tab:dtype_optimization}). 
-Così facendo si riduce il numero di coppie distinte in input all'algoritmo di clustering.
-Il conteggio risultante viene interpretato come un \emph{peso} di ciascuna coordinata. 
-Per attenuare lo sbilanciamento tra coordinate molto visitate e coordinate rare, i pesi vengono normalizzati applicando 
-il logaritmo base 2; le coordinate con peso zero dopo la trasformazione logaritmica vengono riportate artificialmente a 1.
+Così facendo si riduce il numero di coppie distinte in input all'algoritmo di clustering e allo stesso tempo la perdita di precisione
+è considerata trascurabile. Infatti, con 5 cifre decimali la risoluzione massima è attorno ad 1 metro; con 4 cifre decimali la risoluzione 
+passa a circa 10 metri.
+Le somme risultanti dall'operazione di \emph{group-by} vengono utilizzate come \emph{pesi} da associare a ciascuna coordinata, allo scopo
+di rappresentare la frequenza con cui ogni posizione è stata visitata.
+Tuttavia si è notato che esistono diversi dispositivi statici (es: boe, stazioni costiere) che, dotati di transponder AIS, restano stazionari
+in un punto e continuano periodicamente a trasmettere, riempendo il database. 
+Per attenuare lo sbilanciamento tra queste coordinate che all'apparenza sembrano molto visitate e le altre coordinate, 
+i pesi vengono normalizzati applicando il logaritmo base 2 e approssimando il risultato all'intero piu vicino; 
+infine le coordinate con peso zero dopo la trasformazione logaritmica vengono riportate artificialmente a 1.
+La tabella risultante usata come input per l'applicazione dell'algoritmo di DBSCAN ha circa 54.000 righe, mentre il numero di 
+punti stazionari processati è pari a circa 3.780.000 righe.
 
 
 \subsubsection{DBSCAN}
  
 L'algoritmo DBSCAN viene eseguito con i parametri $\varepsilon = 0.075$ e $N_{\min} = 10$, scelti empiricamente 
 in modo da produrre cluster geograficamente coerenti con i porti e i punti di passaggio dell'arcipelago delle Hawaii. 
-Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferimento per il confronto con la variante H-DBSCAN.
+Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferimento per il confronto con la variante H-DBSCAN\@.
 
 \subsubsection{H-DBSCAN}
  
 Il motivo principale per introdurre H-DBSCAN è la sua capacità di identificare cluster di densità variabile, cosa che DBSCAN non 
-riesce a gestire bene~\cite{schubert2017}. 
+riesce a gestire bene. %~\cite{schubert2017}. 
 Il traffico nelle Hawaii presenta una densità fortemente eterogenea: i porti principali come Honolulu hanno concentrazioni 
 di punti molto più elevate rispetto a zone di passaggio o porti minori. 
 In questo contesto, i parametri fissi di DBSCAN tendono a sovra-segmentare le aree sparse o a fondere artificialmente cluster distinti 
@@ -241,9 +315,9 @@ nelle aree dense.
  
 Poiché la libreria \texttt{hdbscan}\footnote{Libreria esterna \texttt{hdbscan} (\url{https://github.com/scikit-learn-contrib/hdbscan}), 
 distinta dall'implementazione inclusa in scikit-learn.} non consente di associare i pesi ad ogni punto ma li considera tutti equiponderati, 
-la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso logaritmico. 
-La tabella espansa conta circa 68.000 righe, una dimensione che consente l'esecuzione in poche decine di secondi. 
-H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
+la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso calcolato in precedenza applicando il logaritmo. 
+La tabella espansa conta circa 100.000 righe, ossia poco meno del doppio della tabella utilizzata come input per l'algoritmo DBSCAN\@. 
+Infine, H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
 e $\text{cluster\_selection\_epsilon} = 0.01$.
 
 \subsection{Costruzione dei waypoint e identificazione delle rotte}\label{ssec:meth_routes}
@@ -279,7 +353,7 @@ Exploitation.
 % -----------------------------------------------------------------------
 \section{Anomaly detection}\label{sec:meth_anomaly}
  
-Prima di descrivere la fase di anomaly detection, è opportuno introdurre due concetti
+Prima di descrivere la fase di anomaly detection, è opportuno distinguere due concetti
 fondamentali. Una \textbf{rotta} è un'entità astratta che modella il fatto che almeno una volta una 
 nave ha viaggiato dal waypoint di partenza a quello di arrivo (e non il viceversa).
 Ipotizzando di modellare i waypoint come nodi di un grafo orientato, una rotta sarebbe uno degli archi.
@@ -289,7 +363,7 @@ periodo analizzato.
 
 La fase di anomaly detection segue le equazioni del framework TREAD originale~\cite{pallotta}.
  L'analisi si concentra su una singola rotta selezionata (una delle più trafficate tra quelle estratte nella fase precedente) 
- e utilizza i trip associati a tale rotta come unità di analisi
+ e utilizza i trip associati a tale rotta come unità di analisi.
  
 \subsection{Decomposizione della velocità e preparazione delle feature}
  
@@ -368,15 +442,16 @@ Le librerie principali utilizzate sono:
     \item \textbf{Polars}: per sfruttare il multithreading durante l'importazione dei file CSV giornalieri e il filtraggio geografico iniziale;
     \item \textbf{Pandas}: per la manipolazione del dataset nelle fasi successive all'importazione;
     \item \textbf{NumPy}: per i calcoli vettoriali e le operazioni sulle serie temporali;
-    \item \textbf{scikit-learn}: per l'implementazione di DBSCAN;
+    \item \textbf{scikit-learn}: per l'implementazione di DBSCAN\@;
     \item \textbf{hdbscan}: libreria per H-DBSCAN, scelta per le sue prestazioni superiori rispetto all'implementazione scikit-learn nella gestione di cluster di densità variabile;
-    \item \textbf{SciPy}: per il calcolo dei convex hull (\texttt{scipy.spatial.ConvexHull}), la Kernel Density Estimation (\texttt{scipy.stats.gaussian\_kde}) e il fitting della distribuzione di Weibull (\texttt{scipy.stats.weibull\_min});
-    \item \textbf{Shapely}: per le operazioni geometriche sui poligoni waypoint (verifica di contenimento punto-poligono);
+    \item \textbf{SciPy}: per il calcolo dei convex hull, la Kernel Density Estimation e il fitting della distribuzione di Weibull;
+    \item \textbf{Shapely}: per le operazioni geometriche sui poligoni waypoint;
     \item \textbf{GeoPandas}: per la visualizzazione rapida dei poligoni waypoint per verifiche qualitative;
     \item \textbf{Plotly}: per la visualizzazione interattiva dei risultati su mappa geografica.
 \end{itemize}
 
-La scelta di Python è motivata dalla disponibilità di un ecosistema maturo per l'analisi di dati anche geospaziali.
+La scelta di Python è motivata dalla disponibilità di un ecosistema maturo per l'analisi di dati anche geospaziali e la sua
+relativa facilità di utilizzo.
 
 
 
@@ -415,11 +490,10 @@ Capitolo~\ref{chap:literature}, quali le lacune di copertura dei ricevitori terr
 la possibilità di manipolazione dei messaggi tramite spoofing o spegnimento volontario
 del transponder~\cite{riassuntone}, fattori che, seppur non specificamente analizzati in
 questa tesi, contribuiscono al divario tra il traffico realmente presente nell'area e
-quello effettivamente osservabile tramite AIS.
+quello effettivamente osservabile tramite AIS\@.
 
 
-\section{Sintesi e anticipazione dei risultati}
-\label{sec:meth_summary}
+\section{Sintesi e anticipazione dei risultati}\label{sec:meth_summary}
 
 Il capitolo ha descritto la metodologia adottata per replicare, adattare e estendere il framework TREAD 
 di Pallotta et al.\ su dati AIS reali relativi alle Hawaii. 
