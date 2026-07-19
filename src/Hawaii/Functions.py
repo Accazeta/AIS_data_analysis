@@ -87,7 +87,7 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) 
             #fillcolor='rgba(255,0,0,0.2)'
         ))
 
-    fig.update_layout(mapbox_style = 'open-street-map',
+    fig.update_layout(mapbox_style = 'carto-positron',
                       margin={'r':0, 't':40, 'l':0, 'b':0},
                       )
     po.plot(fig)

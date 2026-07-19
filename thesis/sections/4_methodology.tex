@@ -1,13 +1,31 @@
 % sections/methodology.tex
-\chapter{Methodology}\label{chap:methodology}
+\chapter{Metodologia}\label{chap:methodology}
 
-Questo capitolo descrive il lavoro svolto nell'ambito di questa tesi: viene illustrato come il framework TREAD proposto
-da Pallotta et al.~\cite{pallotta} è stato analizzato, re-implementato e (in alcune componenti) esteso e migliorato, per poi
-testarlo su un dataset AIS con dati reali relativi all'arcipelago delle Hawaii.
 
 \section{Introduzione}\label{sec:meth_intro}
 
-Non so bene cosa scrivere qui
+Questo capitolo descrive in dettaglio il lavoro svolto per analizzare,
+re-implementare ed estendere il framework TREAD di Pallotta
+et al.~\cite{pallotta}, applicandolo a un dataset AIS reale relativo
+all'arcipelago delle Hawaii.
+
+Come anticipato nel Capitolo~\ref{chap:literature}, il framework TREAD
+è stato scelto come punto di partenza in quanto combina un approccio non
+supervisionato e incrementale con una rappresentazione compatta del
+traffico, caratteristiche che lo rendono adatto all'analisi di dataset
+di grandi dimensioni. Il lavoro non si limita a una replica dell'algoritmo
+originale, ma ne valuta criticamente l'applicabilità a un contesto più
+moderno e voluminoso, identificando gli aspetti mantenuti, quelli adattati
+e le eventuali possibilità di miglioramento.
+
+La pipeline implementata si articola in tre fasi principali:
+\textbf{pre-processing} dei dati grezzi, \textbf{Knowledge Discovery}
+per l'identificazione dei waypoint e l'estrazione delle rotte tramite
+clustering, e \textbf{anomaly detection} basata su un modello
+probabilistico (KDE e distribuzione di Weibull).
+
+Le sezioni seguenti descrivono ciascuna fase nel dettaglio, a partire
+dalla descrizione del dataset utilizzato.
 
 \section{Obiettivi}\label{sec:meth_objectives}
 
@@ -87,8 +105,20 @@ dall'angolo \texttt{COG}, espresso in gradi rispetto al nord geografico. Questa 
 è alla base delle elaborazioni descritte nelle sezioni successive, ed è il motivo per cui
 nel resto del capitolo i termini \emph{record} e \emph{punto} vengono usati in modo intercambiabile.
 
-In figura~\ref{fig:Estratto_dataset} è possibile vedere un esempio dei dati contenuti nelle colonne
-\texttt{MMSI, BaseDateTime, LAT, LON, SOG, COG, Heading, VesselName, IMO}  
+In figura~\ref{fig:ais_vessel_diagram} viene mostrata una visualizzazione grafica dei concetti di 
+LON, LAT, SOG, COG, Heading. Ogni punto è identificato dalla coppia di coordinate (LON, LAT). 
+Il vettore SOG indica la velocità istantanea della nave, con direzione data dall'angolo COG 
+misurato rispetto al nord geografico in senso orario. 
+L'Heading indica l'orientamento della prua, che può differire dal COG a causa 
+di correnti, vento o altre cause
+
+
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\textwidth]{Methodology/vessel_cog_sog_heading.png}
+    \caption{Rappresentazione cartesiana di un record AIS.\@}\label{fig:ais_vessel_diagram}
+\end{figure}
 
 \begin{figure}[htbp]
     \centering
@@ -96,6 +126,8 @@ In figura~\ref{fig:Estratto_dataset} è possibile vedere un esempio dei dati con
     \caption{Estratto del dataset di partenza.}\label{fig:Estratto_dataset}
 \end{figure}
 
+In figura~\ref{fig:Estratto_dataset} è possibile vedere un esempio dei dati contenuti nelle colonne
+\texttt{MMSI, BaseDateTime, LAT, LON, SOG, COG, Heading, VesselName, IMO}  
 
 \subsection{Qualità dei dati}\label{ssec:meth_dataset_quality}
 
@@ -176,7 +208,7 @@ giustificazione.
 \end{table}
 
 Le colonne \texttt{VesselName}, \texttt{IMO} e \texttt{CallSign} vengono convertite da
-\texttt{object} a \texttt{Pandas.StringDtype}. Questa operazione non produce un risparmio di
+\texttt{object} a\\ \texttt{Pandas.StringDtype}. Questa operazione non produce un risparmio di
 memoria significativo, ma garantisce una gestione più corretta dei valori mancanti. Poiché
 queste tre colonne non vengono utilizzate nelle elaborazioni successive, non sono incluse
 in tabella. Grazie alle conversioni effettuate, il dataset si riduce da circa 708 MB a
