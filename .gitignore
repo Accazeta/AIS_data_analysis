@@ -184,4 +184,5 @@ thesis/main.blg
 thesis/main.lof
 thesis/main.lot
 thesis/main.synctex.gz
+*.synctex(busy)
 thesis/main.toc
