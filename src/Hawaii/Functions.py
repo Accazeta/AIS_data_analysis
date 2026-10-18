@@ -2,12 +2,46 @@ import Constants as c
 import pandas as p
 import numpy as np
 
-import plotly.express as px
 import plotly.graph_objects as go
 import plotly.offline as po
 from scipy.spatial import ConvexHull
 import matplotlib.pyplot as plt
 
+# Esri World Street Map: coloured, detailed, no token, no Referer policy issues.
+# (CartoDB basemaps now require an API key.)
+# NOTE: Esri tile URLs use the {z}/{y}/{x} order, not {z}/{x}/{y}.
+# To change style, swap the service name in the URL below:
+#   Street map (coloured):  World_Street_Map
+#   Satellite:              World_Imagery
+#   Light grey (minimal):   Canvas/World_Light_Gray_Base
+_BASEMAP_STYLE = {
+    "version": 8,
+    "sources": {
+        "esri-tiles": {
+            "type": "raster",
+            "tiles": ["https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}"],
+            "tileSize": 256,
+            "attribution": "Tiles © Esri"
+        }
+    },
+    "layers": [{"id": "esri-layer", "type": "raster", "source": "esri-tiles"}]
+}
+
+# Shared legend layout: placed top-left, scrollable, capped height to avoid overlap.
+# bgcolor is light grey so that white markers (e.g. Noise) remain visible.
+_LEGEND = dict(
+    orientation='v',
+    x=0.01,
+    y=0.99,
+    xanchor='left',
+    yanchor='top',
+    bgcolor='rgba(210,210,210,0.85)',
+    bordercolor='grey',
+    borderwidth=1,
+    itemsizing='constant',
+    tracegroupgap=2,
+    maxheight=250          # px — scrollable beyond this
+)
 
 if __name__ == "__main__":
     None
@@ -22,143 +56,183 @@ def great_circle_distance_vectorized(lat_left, lon_left, lat_right, lon_right):
     meters = c.EARTH_RADIUS_M * cx
     return meters
 
+def predict_position(lat, lon, v_x, v_y, delta_t_seconds):
+    '''Track Predictor (Pallotta et al., Algorithm 4): dead reckoning from a known position.\n
+    :param lat, lon: starting position in decimal degrees
+    :param v_x, v_y: east and north components of the speed in nautical knots
+    :param delta_t_seconds: prediction horizon in seconds
+    Returns the predicted (lat, lon) in decimal degrees.
+    The travelled distance (nautical miles) is converted to degrees: 1 NM = 1/60 degree of latitude,
+    while along the longitude it is further divided by cos(lat) (meridians converge towards the poles).
+    '''
+    north_nm = v_y * delta_t_seconds / 3600
+    east_nm = v_x * delta_t_seconds / 3600
+    pred_lat = lat + north_nm / 60
+    pred_lon = lon + east_nm / (60 * np.cos(np.radians(lat)))
+    return pred_lat, pred_lon
+
 def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) -> None:
     '''Function used to plot the results of dbscan and hdbscan\n
     Takes as input two dataframes: clusterd and not_clustered, both containing
     points that were successfully labelled or not, respectively.
     '''
-    
-    
+    # each algorithm is saved to its own html file, otherwise the second plot overwrites the first one
+    # (without a filename, plotly always writes to the same 'temp-plot.html')
     if 'eps' in model.get_params(): #it's DBSCAN
         my_title = 'DBSCAN. Eps: ' + str(model.get_params()['eps']) + ', min_size: ' + str(model.get_params()['min_samples'])
+        filename = 'DBSCAN_waypoints.html'
     if "cluster_selection_epsilon" in model.get_params(): #it's HDBSCAN
         my_title = 'H-DBSCAN. Min Eps: ' + str(model.get_params()['cluster_selection_epsilon']) + \
             ', min_size: ' + str(model.get_params()['min_cluster_size']) + \
             ', max_size: ' + str(model.get_params()['max_cluster_size'])
-    
-    # plot clustered points on a map
-    fig = px.scatter_mapbox(data_frame = clustered,
-                            lon = clustered['LON'],
-                            lat= clustered['LAT'],
-                            zoom = 7,
-                            color = clustered['Weight'],
-                            title = my_title,
-                            color_continuous_scale='portland'  #portland
-                            )
+        filename = 'HDBSCAN_waypoints.html'
+
+    fig = go.Figure()
+
+    # plot clustered points
+    fig.add_trace(go.Scattermap(
+        lat=clustered['LAT'],
+        lon=clustered['LON'],
+        mode='markers',
+        marker=dict(
+            size=6,
+            color=clustered['Weight'],
+            colorscale='portland',
+            showscale=True,
+            colorbar=dict(title='Weight')
+        ),
+        name='Clustered'
+    ))
 
     # add unclustered points
-    fig.add_scattermapbox(
-                          lat= not_clustered['LAT'],
-                          lon= not_clustered['LON'],
-                          marker={'color':'white'},
-                          uid=1
-                          )
+    fig.add_trace(go.Scattermap(
+        lat=not_clustered['LAT'],
+        lon=not_clustered['LON'],
+        mode='markers',
+        marker=dict(size=4, color='white'),
+        name='Noise'
+    ))
 
     # add domain border
-    fig.add_trace(go.Scattermapbox(
-                                    mode = 'lines',
-                                    lon = [c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
-                                    lat = [c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
-                                    marker = {'size':10,
-                                              'color': 'red'},
-                                    uid=2,
-                                    below=0
-                                    ))
-    
-    # Add polygons on map
+    fig.add_trace(go.Scattermap(
+        mode='lines',
+        lon=[c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
+        lat=[c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
+        line=dict(width=2, color='red'),
+        name='Domain'
+    ))
+
+    # Add convex hull polygons
     for label in clustered['Label'].unique():
         groupLATLONDF = clustered[clustered['Label']==label][['LAT', 'LON']]
         hull = ConvexHull(groupLATLONDF)
         hull_lon = [groupLATLONDF['LON'].reset_index().iloc[vertex] for vertex in hull.vertices]
         hull_lat = [groupLATLONDF['LAT'].reset_index().iloc[vertex] for vertex in hull.vertices]
-    
         hull_lon = [serie.tolist()[1] for serie in hull_lon]
         hull_lat = [serie.tolist()[1] for serie in hull_lat]
-    
-        fig.add_trace(go.Scattermapbox(
+        fig.add_trace(go.Scattermap(
             lat=hull_lat + [hull_lat[0]],
             lon=hull_lon + [hull_lon[0]],
             mode='lines',
             line=dict(color='black', width=2),
-            below=0,
             showlegend=False,
             name='WP_' + str(label)
-            #fill='toself',
-            #fillcolor='rgba(255,0,0,0.2)'
         ))
 
-    fig.update_layout(mapbox_style = 'carto-positron',
-                      margin={'r':0, 't':40, 'l':0, 'b':0},
-                      )
-    po.plot(fig)
+    fig.update_layout(
+        title=my_title,
+        map=dict(
+            style=_BASEMAP_STYLE,
+            center=dict(lat=clustered['LAT'].mean(), lon=clustered['LON'].mean()),
+            zoom=7
+        ),
+        margin={'r':0, 't':40, 'l':0, 'b':0},
+        legend=_LEGEND
+    )
+    po.plot(fig, filename='../../plot/' + filename, auto_open=True)
 
 def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) -> None:
     if inputDF.empty:
         print("No points to be plotted!")
-    
-    else:
-        match mode:
-            case "SingleVessel":
-                output_title = "MMSI: " + str(inputDF.at[inputDF.index[0], 'MMSI'])
-            case "SingleRoute":
-                if type(inputDF.at[inputDF.index[0], 'Route']) == p.Series:
-                    output_title = "Route: " + str(inputDF.at[inputDF.index[0], 'Route'].iloc[0])
-                else:
-                    output_title = "Route: " + str(inputDF.at[inputDF.index[0], 'Route'])
-            case _: 
-                print("Invalid plotting mode")
+        return
 
-        # plot route points
-        fig = px.scatter_mapbox(data_frame = inputDF,
-                                    lon = inputDF['LON'],
-                                    lat= inputDF['LAT'],
-                                    zoom = 12,
-                                    color = inputDF['Avg_Speed'],
-                                    title = output_title,
-                                    color_continuous_scale='portland',  #portland
-                                    hover_data=inputDF[['MMSI', 'BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']]
-                                    )
+    match mode:
+        case "SingleVessel":
+            output_title = "MMSI: " + str(inputDF.at[inputDF.index[0], 'MMSI'])
+        case "SingleRoute":
+            if type(inputDF.at[inputDF.index[0], 'Route']) == p.Series:
+                output_title = "Route: " + str(inputDF.at[inputDF.index[0], 'Route'].iloc[0])
+            else:
+                output_title = "Route: " + str(inputDF.at[inputDF.index[0], 'Route'])
+        case _:
+            print("Invalid plotting mode")
+            return
 
-        # add domain border
-        fig.add_trace(go.Scattermapbox(
-                                        mode = 'lines',
-                                        lon = [c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
-                                        lat = [c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
-                                        marker = {'size':10,
-                                                  'color': 'red'},
-                                        uid=2,
-                                        below=0
-                                        ))
-    
-        # Add polygons on map
-        for label in clusteredPointsDF['Label'].unique():
-            groupLATLONDF = clusteredPointsDF[clusteredPointsDF['Label']==label][['LAT', 'LON']]
-            hull = ConvexHull(groupLATLONDF)
-            hull_lon = [groupLATLONDF['LON'].reset_index().iloc[vertex] for vertex in hull.vertices]
-            hull_lat = [groupLATLONDF['LAT'].reset_index().iloc[vertex] for vertex in hull.vertices]
+    fig = go.Figure()
 
-            hull_lon = [serie.tolist()[1] for serie in hull_lon]
-            hull_lat = [serie.tolist()[1] for serie in hull_lat]
+    # plot route points
+    fig.add_trace(go.Scattermap(
+        lat=inputDF['LAT'],
+        lon=inputDF['LON'],
+        mode='markers',
+        marker=dict(
+            size=6,
+            color=inputDF['Avg_Speed'],
+            colorscale='portland',
+            showscale=True,
+            colorbar=dict(title='Avg_Speed')
+        ),
+        customdata=inputDF[['MMSI', 'BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']].to_numpy(),
+        hovertemplate=(
+            'MMSI: %{customdata[0]}<br>' +
+            'Time: %{customdata[1]}<br>' +
+            'Avg_Speed: %{customdata[2]:.2f} kn<br>' +
+            'Route: %{customdata[3]}<br>' +
+            'Status: %{customdata[4]}<extra></extra>'
+        ),
+        name='Route points'
+    ))
 
-            fig.add_trace(go.Scattermapbox(
-                lat=hull_lat + [hull_lat[0]],
-                lon=hull_lon + [hull_lon[0]],
-                mode='lines',
-                line=dict(color='black', width=2),
-                below=0,
-                showlegend=False,
-                name='WP_' + str(label)
-                #fill='toself',
-                #fillcolor='rgba(255,0,0,0.2)'
-            ))
+    # add domain border
+    fig.add_trace(go.Scattermap(
+        mode='lines',
+        lon=[c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
+        lat=[c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
+        line=dict(width=2, color='red'),
+        name='Domain'
+    ))
 
-        fig.update_layout(mapbox_style = 'open-street-map',
-                          margin={'r':0, 't':40, 'l':0, 'b':0},
-                          )
-        po.plot(fig)
+    # Add convex hull polygons
+    for label in clusteredPointsDF['Label'].unique():
+        groupLATLONDF = clusteredPointsDF[clusteredPointsDF['Label']==label][['LAT', 'LON']]
+        hull = ConvexHull(groupLATLONDF)
+        hull_lon = [groupLATLONDF['LON'].reset_index().iloc[vertex] for vertex in hull.vertices]
+        hull_lat = [groupLATLONDF['LAT'].reset_index().iloc[vertex] for vertex in hull.vertices]
+        hull_lon = [serie.tolist()[1] for serie in hull_lon]
+        hull_lat = [serie.tolist()[1] for serie in hull_lat]
+        fig.add_trace(go.Scattermap(
+            lat=hull_lat + [hull_lat[0]],
+            lon=hull_lon + [hull_lon[0]],
+            mode='lines',
+            line=dict(color='black', width=2),
+            showlegend=False,
+            name='WP_' + str(label)
+        ))
 
-def route_plot(inputDF : p.DataFrame, 
-               color_criteria : str, 
+    fig.update_layout(
+        title=output_title,
+        map=dict(
+            style=_BASEMAP_STYLE,
+            center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean()),
+            zoom=12
+        ),
+        margin={'r':0, 't':40, 'l':0, 'b':0},
+        legend=_LEGEND
+    )
+    po.plot(fig)
+
+def route_plot(inputDF : p.DataFrame,
+               color_criteria : str,
                title : str = 'Route',
                hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus'],
                filename : str = 'route_plot.html'
@@ -170,11 +244,10 @@ def route_plot(inputDF : p.DataFrame,
     :param str title: The title of the resulting plot, shown at the top
     :param list hover_data: list of strings specifying the names of the columns to show when the mouse overs on a point
     '''
-    
     if inputDF.empty:
         print("No points to be plotted!")
         return
-    
+
     if type(color_criteria) == p.Series or type(color_criteria) == np.ndarray:
         final_criteria = color_criteria
     else:
@@ -187,104 +260,129 @@ def route_plot(inputDF : p.DataFrame,
             print('Wrong color_criteria type')
             return
 
-    
-    # plot route points
-    fig = px.scatter_mapbox(data_frame = inputDF,
-                                lon = inputDF['LON'],
-                                lat= inputDF['LAT'],
-                                zoom = 12,
-                                color = final_criteria,
-                                title = title,
-                                color_continuous_scale='portland',  #portland
-                                hover_data=inputDF[hover_data]
-                                )
-    
+    fig = go.Figure()
+
+    fig.add_trace(go.Scattermap(
+        lat=inputDF['LAT'],
+        lon=inputDF['LON'],
+        mode='markers',
+        marker=dict(
+            size=6,
+            color=final_criteria,
+            colorscale='portland',
+            showscale=True,
+            colorbar=dict(title=color_criteria if isinstance(color_criteria, str) else '')
+        ),
+        customdata=inputDF[hover_data].to_numpy(),
+        hovertemplate='<br>'.join(
+            [f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(hover_data)]
+        ) + '<extra></extra>',
+        name='Route points'
+    ))
+
     # add domain border
-    fig.add_trace(go.Scattermapbox(
-                                    mode = 'lines',
-                                    lon = [c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
-                                    lat = [c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
-                                    marker = {'size':10,
-                                              'color': 'red'},
-                                    uid=2,
-                                    below=0
-                                    ))
-    
-    fig.update_layout(mapbox_style = 'open-street-map',
-                       margin={'r':0, 't':40, 'l':0, 'b':0},
-                       )
+    fig.add_trace(go.Scattermap(
+        mode='lines',
+        lon=[c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
+        lat=[c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
+        line=dict(width=2, color='red'),
+        name='Domain'
+    ))
+
+    fig.update_layout(
+        title=title,
+        map=dict(
+            style=_BASEMAP_STYLE,
+            center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean()),
+            zoom=12
+        ),
+        margin={'r':0, 't':40, 'l':0, 'b':0},
+        legend=_LEGEND
+    )
     po.plot(fig, filename='../../plot/' + filename, auto_open=True)
 
 def route_arrows_plot(inputDF : p.DataFrame,
                       color_criteria : str = 'Avg_Speed',
                       scale_factor : float = 0.001,
-                      title : str = 'Plot with arrows'
+                      title : str = 'Plot with arrows',
+                      max_points : int = 5000
                       ) -> go.Figure:
     """
-    Plotly plot that plots vessels positions, their instantaneous speed and direction 
-    
+    Plotly plot that plots vessels positions, their instantaneous speed and direction.
+    Uses the modern Scattermap API (no Mapbox token required) with fully vectorized
+    numpy operations to handle large datasets efficiently.
+
     Parameters:
-    :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted. Required columns: "MMSI, LAT, LON, COG, SOG, Avg_Speed, "
-    :param str color_criteria: the criteria used to assign a color to the different points. Must be a valid dataframe column name. Default set to 'MMSI' 
-    :param float scale_factor: the multiplying constant to adjust arrows length
+    :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted. Required columns: "MMSI, LAT, LON, COG, SOG, Avg_Speed"
+    :param str color_criteria: the criteria used to assign a color to the different points. Must be a valid dataframe column name. Default: 'Avg_Speed'
+    :param float scale_factor: the multiplying constant to adjust arrows length. Default: 0.001
+    :param int max_points: maximum number of points to render. If the dataframe exceeds this, it is uniformly sampled. Default: 5000
     Returns:
-    Plotly Graph Objects plot
+    Plotly Graph Objects Figure
     """
     if color_criteria not in inputDF.columns:
         raise KeyError(f"Column {color_criteria} not found in the provided Dataframe")
-    
-    inputDF = inputDF.copy() # This is necessary so that the code below doesn't raise a warning
-    # Compute arrow endpoints from SOG and COG
-    inputDF.loc[:,"delta_lon"] = scale_factor * inputDF.loc[:,color_criteria] * np.sin(np.radians(inputDF.loc[:,"COG"]))
-    inputDF.loc[:,"delta_lat"] = scale_factor * inputDF.loc[:,color_criteria] * np.cos(np.radians(inputDF.loc[:,"COG"]))
-    
+
+    inputDF = inputDF.copy()
+
+    # Uniform sampling if dataset is too large for the browser to render
+    if len(inputDF) > max_points:
+        print(f"[route_arrows_plot] Dataset has {len(inputDF)} points, sampling down to {max_points} for rendering.")
+        inputDF = inputDF.sample(n=max_points, random_state=42).sort_index()
+
+    # Vectorized computation of arrow endpoints
+    cog_rad = np.radians(inputDF["COG"].to_numpy())
+    magnitude = scale_factor * inputDF[color_criteria].to_numpy()
+    lat0 = inputDF["LAT"].to_numpy().round(5)
+    lon0 = inputDF["LON"].to_numpy().round(5)
+    lat1 = (lat0 + magnitude * np.cos(cog_rad)).round(5)
+    lon1 = (lon0 + magnitude * np.sin(cog_rad)).round(5)
+
+    # Build interleaved [start, end, NaN, ...] arrays with numpy (much faster than extend in a loop)
+    nan_col = np.full(len(inputDF), np.nan)
+    arrow_lat = np.column_stack([lat0, lat1, nan_col]).ravel()
+    arrow_lon = np.column_stack([lon0, lon1, nan_col]).ravel()
+
     fig = go.Figure()
 
-    # add arrow traces before points so that they do not cover the points when overing with the mouse
-    # Add arrows for vessel movement
-    arrow_lat = []
-    arrow_lon = []
-    for _, row in inputDF.iterrows():
-        arrow_lat.extend([round(row['LAT'], 5), round(row['LAT'] + row['delta_lat'], 5), None])
-        arrow_lon.extend([round(row['LON'], 5), round(row['LON'] + row['delta_lon'], 5), None])
-    
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=arrow_lat,
-            lon=arrow_lon,
-            mode='lines',
-            line=dict(width=1, color='grey')
-        )
-    )
+    # Add arrows first so they don't cover the scatter points on hover
+    fig.add_trace(go.Scattermap(
+        lat=arrow_lat,
+        lon=arrow_lon,
+        mode='lines',
+        line=dict(width=1, color='grey'),
+        hoverinfo='skip',
+        showlegend=False,
+        name='Arrows'
+    ))
 
-    # Add scatter points for the vessel positions
-    fig.add_trace(
-        go.Scattermapbox(
-            lat=inputDF["LAT"],
-            lon=inputDF["LON"],
-            mode="markers",
-            marker=dict(size=8, color=inputDF[color_criteria], colorscale='portland', showscale=True),
-            text=inputDF["MMSI"],
-            hovertemplate=(
-                'MMSI: %{text}<br>' +
-                'COG: %{customdata[0]:.1f} deg<br>' +
-                'SOG: %{customdata[1]:.1f} kn<br>' +
-                'Avg_Speed: %{customdata[2]:.1f} kn<extra></extra>'
-            ),
-            customdata=inputDF[['COG', 'SOG', 'Avg_Speed']].to_numpy(),
-            name="Arrows plot"
-        )
-    )
+    # Add scatter points for vessel positions
+    fig.add_trace(go.Scattermap(
+        lat=inputDF["LAT"],
+        lon=inputDF["LON"],
+        mode="markers",
+        marker=dict(size=8, color=inputDF[color_criteria], colorscale='portland', showscale=True),
+        text=inputDF["MMSI"],
+        hovertemplate=(
+            'MMSI: %{text}<br>' +
+            'COG: %{customdata[0]:.1f} deg<br>' +
+            'SOG: %{customdata[1]:.1f} kn<br>' +
+            'Avg_Speed: %{customdata[2]:.1f} kn<extra></extra>'
+        ),
+        customdata=inputDF[['COG', 'SOG', 'Avg_Speed']].to_numpy(),
+        name="Vessels"
+    ))
 
     fig.update_layout(
         title=title,
-        mapbox=dict(
-            style="open-street-map",
+        map=dict(
+            style=_BASEMAP_STYLE,
             center=dict(lat=inputDF["LAT"].mean(), lon=inputDF["LON"].mean()),
             zoom=10
         ),
         margin={'r':40, 't':40, 'l':40, 'b':40},
-        showlegend=True
+        showlegend=True,
+        legend=_LEGEND
     )
     return fig
 
@@ -297,15 +395,13 @@ def plot_kde(xx : np.ndarray, yy : np.ndarray, zz : np.ndarray, fig_width : floa
     :param float fig_width: the width of the figure
     :param float fig_heigth: the height of the figure
     '''
-    
     fig = plt.figure(figsize=(fig_width, fig_height))
-    ax1 = fig.add_subplot(111) #111 -> 1 row, 1 column, index of the current subplot
-    im1 = ax1.pcolormesh(xx, yy, zz, shading='auto', cmap='turbo') # pseudocolor plot with non-regular grid (makes the plt rectangular instead of squared)
+    ax1 = fig.add_subplot(111)
+    im1 = ax1.pcolormesh(xx, yy, zz, shading='auto', cmap='turbo')
     ax1.set_title('KDE')
     ax1.set_xlabel('Longitude')
     ax1.set_ylabel('Latitude')
-    ax1.set_aspect('equal')  # Sets the correct aspect ratio
+    ax1.set_aspect('equal')
     plt.colorbar(im1, ax=ax1, label='Density')
-    plt.tight_layout() # automatically adjust subplot size so that it fits its area
-
+    plt.tight_layout()
     return fig

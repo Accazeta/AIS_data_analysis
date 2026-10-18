@@ -3,6 +3,7 @@
 
 % Packages
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
 \usepackage[utf8]{inputenc}
 \usepackage[main=italian, english]{babel}
 \usepackage[top=3cm, bottom=3cm, left=3cm, right=3cm]{geometry}
@@ -21,18 +22,18 @@
 \addtolength{\topmargin}{-12.62pt}
 
 
-% Page margins
 
-
-
-% Custom commands (probably useless)
 \newcommand{\universityname}{Università degli Studi di Bergamo}
 \newcommand{\facultyname}{Scuola di Ingegneria}
 \newcommand{\departmentname}{Dipartimento di Ingegneria Gestionale, dell'Informazione e della Produzione}
-\newcommand{\thesistitle}{XXXXXX TITOLO TESI XXXXXXX}
+\newcommand{\coursename}{Corso di Laurea Magistrale in Ingegneria Informatica}
+\newcommand{\courseclass}{Classe n.~LM-32 -- Ingegneria Informatica}
+\newcommand{\thesistitle}{Titolo vero della tesi}
 \newcommand{\thesisauthor}{Federico Panzeri}
-\newcommand{\thesisyear}{2025}
-\newcommand{\supervisorname}{Prof.~Mirko Mazzoleni}
+\newcommand{\studentid}{123456}               
+\newcommand{\academicyear}{2025/2026}           
+\newcommand{\supervisorname}{Chiar.mo Prof.~Mirko Mazzoleni}
+\newcommand{\cosupervisorname}{eventuale correlatore}             
 
 % Page styles
 \pagestyle{fancy}
@@ -84,7 +85,7 @@
 \input{sections/6_conclusions}
 
 % Bibliography
-\nocite{*} %adds all bibliography to the main file
+%\nocite{*} %adds all bibliography to the main file
 \bibliographystyle{unsrtnat}
 \bibliography{bibliography}
 

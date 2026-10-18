@@ -45,7 +45,7 @@ che offre il download in bulk di tutti i dati AIS registrati suddivisi per anno.
 normativa statunitense con diversi compiti tra cui il monitoraggio oceanico~\cite{noaa_wiki}.
 I file scaricati dalla piattaforma hanno nome nel formato \texttt{AIS\_YYYY\_MM\_DD} (dove YYYY rappresenta l'anno, MM il mese e DD il giorno
 di registrazione dei dati) e contengono tutti i messaggi ricevuti dall'ente in una singola giornata di tutto il territorio nazionale monitorato.
-Per questa tesi sono stati utilizzati i dati relativi al primo trimestre 2019 (gennaio-marzo, estremi inclusi), filtrati
+Per questa tesi sono stati utilizzati i dati relativi al periodo gennaio-marzo 2019 (estremi inclusi), filtrati
 sull'area delle Hawaii tramite una bounding box le cui estremità hanno le seguenti coordinate:
 \begin{itemize}
     \item Latitudine: da $18.77^\circ$N a $22.63^\circ$N,
@@ -165,9 +165,9 @@ La soglia usata per rimuovere le navi meno attive è calcolata dinamicamente (e 
 da rendere il codice indipendente dalle dimensioni del dataset che si decide di utilizzare. L'idea dietro la decisione di rimuovere queste navi
  è che, al di sotto di questa soglia, non contribuiscono in maniera significativa al traffico dell'area e la loro presenza potrebbe 
 distorcere la fase di clustering.
-Prima dell'applicazione di questa soglia il dataset conteneva 781 imbarcazioni distinte (9.458.822 record). In seguito il numero di 
-navi distinte è passato a 494 (9.383.271 righe), eliminando 287 vascelli (circa un terzo delle imbarcazioni di partenza) che costituivano 
-solo lo 0,79\% dei record totali. 
+Prima dell'applicazione di questa soglia il dataset conteneva 602 imbarcazioni distinte (5.460.800 record). In seguito il numero di 
+navi distinte è passato a 403 (5.415.168 righe), eliminando 199 vascelli (circa un terzo delle imbarcazioni di partenza) che costituivano 
+solo lo 0,84\% dei record totali. 
 
 \subsection{Ottimizzazione della memoria}\label{ssec:meth_memory}
 
@@ -237,7 +237,7 @@ ancora come rapporto distanza/tempo. Al primo punto di ogni traiettoria, per il 
 precedente, viene assegnato direttamente il valore di \texttt{SOG}. I punti con \texttt{Avg\_Speed} superiore
 a 102 nodi (e che non fanno scattare la soglia \texttt{LOST\_TIME\_THRESHOLD\_SECONDS}) vengono eliminati, 
 in quanto ritenuti il risultato di errori di posizionamento GPS\@. In totale dal dataset sono stati rimossi 7 record
-su 5.460.788 che ricadevano in quest'ultima casistica. 
+su 5.415.163 che ricadevano in quest'ultima casistica. 
  
 A partire da \texttt{Avg\_Speed}, viene costruita la colonna \texttt{EstimatedStatus}, che classifica ogni punto
 in una delle sei categorie seguenti. Le prime quattro riguardano la gestione dei gap temporali e vengono
@@ -310,7 +310,7 @@ migliorativa (\emph{Hierarchical DBSCAN}).
 \subsubsection{Preparazione degli input per il clustering}
  
 L'input fornito agli algoritmi di clustering è costituito da tutti i punti classificati come 
-\emph{stationary}, \emph{entry} o \emph{exit}, che rappresentano circa il 69,2\% del dataset totale.
+\emph{stationary}, \emph{entry} o \emph{exit}, che rappresentano circa il 69,6\% del dataset totale.
 
 Per ridurre la dimensione dell'input e superare le limitazioni di memoria dell'implementazione scikit-learn di DBSCAN, 
 il cui costo di memoria è $O(n^2)$, i punti vengono aggregati tramite un'operazione di \emph{group-by} sulle sole coordinate GPS, 
@@ -326,8 +326,8 @@ in un punto e continuano periodicamente a trasmettere, riempendo il database.
 Per attenuare lo sbilanciamento tra queste coordinate che all'apparenza sembrano molto visitate e le altre coordinate, 
 i pesi vengono normalizzati applicando il logaritmo base 2 e approssimando il risultato all'intero piu vicino; 
 infine le coordinate con peso zero dopo la trasformazione logaritmica vengono riportate artificialmente a 1.
-La tabella risultante usata come input per l'applicazione dell'algoritmo di DBSCAN ha circa 54.000 righe, mentre il numero di 
-punti stazionari processati è pari a circa 3.780.000 righe.
+La tabella risultante usata come input per l'applicazione dell'algoritmo di DBSCAN ha circa 52.000 righe, mentre il numero di 
+punti stazionari processati è pari a circa 3.770.000 righe.
 
 
 \subsubsection{DBSCAN}
@@ -348,7 +348,7 @@ nelle aree dense.
 Poiché la libreria \texttt{hdbscan}\footnote{Libreria esterna \texttt{hdbscan} (\url{https://github.com/scikit-learn-contrib/hdbscan}), 
 distinta dall'implementazione inclusa in scikit-learn.} non consente di associare i pesi ad ogni punto ma li considera tutti equiponderati, 
 la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso calcolato in precedenza applicando il logaritmo. 
-La tabella espansa conta circa 100.000 righe, ossia poco meno del doppio della tabella utilizzata come input per l'algoritmo DBSCAN\@. 
+La tabella espansa conta circa 97.000 righe, ossia poco meno del doppio della tabella utilizzata come input per l'algoritmo DBSCAN\@. 
 Infine, H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
 e $\text{cluster\_selection\_epsilon} = 0.01$.
 
@@ -432,13 +432,14 @@ Il prodotto punto per punto delle due KDE (equazione~8 di~\cite{pallotta}) forni
 un valore di densità $p_i$ che combina informazione spaziale e cinematica.
 
 
-\subsection{Classificazione dei trip e train/test split}
+\subsection{Classificazione dei trip per lunghezza}
  
 I trip associati alla rotta selezionata vengono ordinati per lunghezza (numero di punti) in ordine crescente. 
-Il dataset di addestramento (\emph{train}) è composto da una frazione configurabile dei trip più corti, 
-assunti come rappresentativi del comportamento normale; il restante costituisce il dataset di test. 
-La scelta di usare i trip più corti come riferimento di normalità è motivata dall'osservazione che i trip anomali 
-tendono ad avere traiettorie più lunghe o devianti rispetto a quelli regolari.
+Questo ordinamento riflette l'assunzione secondo cui i trip più corti sono maggiormente rappresentativi del 
+comportamento normale, mentre i trip più lunghi o devianti hanno una maggiore probabilità di essere anomali; 
+tale assunzione guida l'interpretazione del ranking di anomalia descritto nella sezione successiva, ma 
+l'intero insieme dei trip disponibili viene utilizzato sia per la stima dei parametri del modello sia per 
+il calcolo dello score di anomalia.
  
 \subsection{Calcolo della probabilità di transizione e anomaly scoring}
  
@@ -448,8 +449,8 @@ di una traiettoria, modellata tramite una distribuzione di Weibull, seguendo l'e
 p(\Delta p \mid \Delta t) = \exp\!\left[-{\left(\frac{\Delta p}{m \cdot \Delta t}\right)}^{\beta}\right]
 \]
 dove $\Delta p$ è la distanza tra la posizione predetta (tramite il Track Predictor, algoritmo~4 di~\cite{pallotta}) 
-e quella effettiva, $\Delta t$ è l'intervallo di tempo, e $m$ e $\beta$ sono i parametri del modello stimati sui dati di addestramento.
-
+e quella effettiva, $\Delta t$ è l'intervallo di tempo, e $m$ e $\beta$ sono i parametri del modello stimati 
+sull'intero insieme di trip disponibili.
 I parametri vengono stimati calcolando, per un insieme di lag temporali adattativi 
 (da un minimo di 30 s a un massimo di un quinto della durata mediana dei trip), 
 le distribuzioni delle distanze $\Delta p$ e fittando su ciascuna una distribuzione di Weibull 
