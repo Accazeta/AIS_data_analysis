@@ -145,8 +145,10 @@ Le tecnologie utilizzate verranno descritte meglio nella Sezione~\ref{sec:meth_t
 
 \subsection{Importazione, filtraggio geografico e rimozione dei duplicati}
 
-I file scaricati dalla piattaforma del NOAA sono in formato ``.zip''. Pertanto vengono automaticamente decompressi, importati in memoria
-e successivamente eliminati dal disco per liberare spazio.
+I file scaricati dalla piattaforma del NOAA sono in formato ``.zip''. Pertanto vengono automaticamente decompressi
+e successivamente eliminati dal disco per liberare spazio, mentre i file csv così estratti vengono mantenuti.
+Il nome di ogni archivio decompresso viene registrato in un apposito file di log, così da non ripetere l'operazione
+nelle esecuzioni successive.
 Durante l'importazione, ogni file csv letto viene salvato in memoria sottoforma di \texttt{DataFrame}. In questa fase, 
 vengono immediatamente scartati tutti quei messaggi le cui coordinate di latitudine e longitudine ricadono
 al di fuori del perimetro citato nella sezione~\ref{sec:meth_dataset}.
@@ -172,7 +174,7 @@ solo lo 0,84\% dei record totali.
 \subsection{Ottimizzazione della memoria}\label{ssec:meth_memory}
 
 Il dataset pulito viene riletto in Pandas per le elaborazioni successive. Per ridurre il
-consumo di memoria (il dataset occupa circa 708 MB nella rappresentazione di default)
+consumo di memoria (il dataset occupa circa 702 MB nella rappresentazione di default)
 i tipi di dato delle colonne vengono convertiti nelle rappresentazioni più compatte
 compatibili con i limiti tecnici definiti dalla normativa ITU-R M.1371-6~\cite{itu2026},
 che specifica la codifica binaria di ciascun campo del messaggio AIS\@.
@@ -211,8 +213,8 @@ Le colonne \texttt{VesselName}, \texttt{IMO} e \texttt{CallSign} vengono convert
 \texttt{object} a\\ \texttt{Pandas.StringDtype}. Questa operazione non produce un risparmio di
 memoria significativo, ma garantisce una gestione più corretta dei valori mancanti. Poiché
 queste tre colonne non vengono utilizzate nelle elaborazioni successive, non sono incluse
-in tabella. Grazie alle conversioni effettuate, il dataset si riduce da circa 708 MB a
-circa 468 MB, con un risparmio prossimo al 33\%.
+in tabella. Grazie alle conversioni effettuate, il dataset si riduce da circa 702 MB a
+circa 465 MB, con un risparmio prossimo al 34\%.
 
 \subsection{Calcolo della velocità media e classificazione degli stati}\label{ssec:meth_status}
  
@@ -358,8 +360,15 @@ Una volta determinati i cluster tramite H-DBSCAN, per ciascun cluster viene calc
 tramite \texttt{scipy.spatial.ConvexHull}. L'inviluppo convesso di ogni cluster definisce il perimetro del waypoint corrispondente, 
 rappresentato come un poligono tramite la libreria Shapely.
  
-Per ogni punto del dataset viene quindi verificato se esso ricade all'interno di uno dei poligoni waypoint, 
-informazione salvata nella colonna \texttt{IsInWP}. 
+Per ogni punto del dataset viene quindi verificato se esso ricade all'interno o sul bordo
+di uno dei poligoni waypoint, informazione salvata nella colonna \texttt{IsInWP}.
+Il bordo viene incluso perché i vertici dell'inviluppo convesso sono essi stessi punti del
+dataset: escludendoli, tali punti risulterebbero esterni al
+waypoint che contribuiscono a definire.
+Poiché gli inviluppi convessi di cluster diversi possono sovrapporsi, un punto può ricadere
+in più di un waypoint; in tal caso viene assegnato a quello con indice minore.
+Per valutare l'impatto di questa scelta, viene inoltre calcolato il numero di punti che
+ricadono in più di un waypoint.
 Un waypoint è considerato \emph{significativo} per un dato punto se quest'ultimo soddisfa almeno una delle condizioni seguenti: 
 \texttt{Avg\_Speed} $\leq$ \texttt{SPEED\_THRESHOLD}, oppure il suo \texttt{EstimatedStatus} è \emph{entry} o \emph{exit}.
 
@@ -448,9 +457,18 @@ di una traiettoria, modellata tramite una distribuzione di Weibull, seguendo l'e
 \[
 p(\Delta p \mid \Delta t) = \exp\!\left[-{\left(\frac{\Delta p}{m \cdot \Delta t}\right)}^{\beta}\right]
 \]
-dove $\Delta p$ è la distanza tra la posizione predetta (tramite il Track Predictor, algoritmo~4 di~\cite{pallotta}) 
-e quella effettiva, $\Delta t$ è l'intervallo di tempo, e $m$ e $\beta$ sono i parametri del modello stimati 
-sull'intero insieme di trip disponibili.
+dove $\Delta t$ è l'intervallo di tempo e $\Delta p$ è la distanza tra la posizione effettiva
+e quella predetta tramite il Track Predictor (algoritmo~4 di~\cite{pallotta}).
+Quest'ultimo stima la posizione futura ipotizzando che la nave proceda con la stessa direzione
+e la stessa velocità dell'ultima osservazione. Lo spostamento viene calcolato a partire dalle
+componenti della velocità $v_x = \mathrm{SOG}\cos\theta$ (verso est) e $v_y = \mathrm{SOG}\sin\theta$ (verso nord),
+dove $\theta = (450^\circ - \mathrm{COG}) \bmod 360^\circ$ è la rotta convertita in angolo aritmetico.
+Lo spostamento, espresso in miglia nautiche, viene convertito in gradi considerando che un miglio
+nautico corrisponde a $1/60$ di grado di latitudine, mentre in longitudine il valore va ulteriormente
+diviso per $\cos(\mathrm{lat})$.
+La distanza $\Delta p$, espressa in metri, è infine calcolata in maniera analoga a quanto descritto
+nella Sezione~\ref{ssec:meth_status}.
+I parametri $m$ e $\beta$ del modello sono stimati sull'intero insieme di trip disponibili.
 I parametri vengono stimati calcolando, per un insieme di lag temporali adattativi 
 (da un minimo di 30 s a un massimo di un quinto della durata mediana dei trip), 
 le distribuzioni delle distanze $\Delta p$ e fittando su ciascuna una distribuzione di Weibull 
@@ -460,7 +478,12 @@ sull'insieme dei valori ottenuti ai diversi lag; il parametro di forma $\beta$ �
  
 Ad ogni trip viene infine assegnato un punteggio di anomalia come log-somma normalizzata 
 delle probabilità di transizione lungo la traiettoria (equazione~9 di~\cite{pallotta}), 
-combinata con la log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori della rotta (equazione~4). I trip con punteggio più basso sono classificati come potenzialmente anomali.
+combinata con la log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori della rotta (equazione~4).
+Quest'ultima è stimata, come in~\cite{pallotta}, come il rapporto tra il numero di navi distinte
+che percorrono la rotta e il numero totale di navi considerate. Poiché l'analisi è condotta su
+una sola rotta, la probabilità a priori risulta pari a 1 per tutti i trip e non influisce sul ranking;
+il termine viene comunque mantenuto nell'implementazione per consentire l'estensione dell'analisi a più rotte.
+I trip con punteggio più basso sono classificati come potenzialmente anomali.
 
 
 

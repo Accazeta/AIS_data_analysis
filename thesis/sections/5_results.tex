@@ -18,14 +18,20 @@ la bounding box descritta nella Sezione~\ref{sec:meth_dataset}.
 \subsection{Dimensioni e composizione}
  
 I dati grezzi, dopo il filtraggio geografico, ammontano a 5.462.415 record. A seguito
-della rimozione dei duplicati esatti il dataset si riduce a 5.460.800 record.
-Dopo la fase di ottimizzazione della memoria, il dataset è passato da circa 708~MB a
-circa 468~MB, con un risparmio prossimo al 33\%.
+della rimozione dei duplicati esatti il dataset si riduce a 5.460.800 record, generati
+da 602 imbarcazioni distinte (in media 9.071 record per nave, con un minimo di 1 e un
+massimo di 82.554).
  
-Sulle imbarcazioni rimaste dopo la rimozione di quelle con attività inferiore alla
-soglia dinamica, si osservano le seguenti statistiche sul numero di record per nave:
-media di 13.437 record, deviazione standard di 16.309, con un massimo di 82.554 e un
-minimo di 921 record per singola imbarcazione.
+L'applicazione della soglia dinamica sull'attività delle imbarcazioni
+(Sezione~\ref{sec:meth_preprocessing}), pari al 10\% del numero medio di record per
+nave e quindi a 907 record, ha eliminato 199 imbarcazioni, corrispondenti allo 0,84\%
+dei record totali. Il dataset risultante conta 5.415.168 record relativi a 403
+imbarcazioni, sulle quali si osservano le seguenti statistiche sul numero di record per
+nave: media di 13.437 record, deviazione standard di 16.309, con un massimo di 82.554 e
+un minimo di 921 record per singola imbarcazione.
+ 
+Dopo la fase di ottimizzazione della memoria, il dataset è passato da circa 702~MB a
+circa 465~MB, con un risparmio prossimo al 34\%.
  
 \subsection{Classificazione degli stati e punti stazionari}
  
@@ -40,9 +46,11 @@ Knowledge Discovery. L'aggregazione di questi punti per coordinate ha prodotto
 \subsection{Waypoint e rotte estratte}
  
 Il clustering H-DBSCAN applicato ai punti stazionari aggregati ha identificato
-144 waypoint distinti (da \texttt{WP\_0} a \texttt{WP\_143}). A partire da questi,
-sono stati estratti complessivamente 910 rotte distinte e 35.731 trip sull'intero
-dataset.
+144 waypoint distinti (da \texttt{WP\_0} a \texttt{WP\_143}).
+I punti che ricadono in più di un waypoint, a causa della sovrapposizione degli inviluppi
+convessi, sono 7.298, pari allo 0,135\% del dataset: l'effetto della regola di assegnazione
+descritta nella Sezione~\ref{ssec:meth_routes} è quindi trascurabile. A partire da questi waypoint,
+sono state estratte in tutto 910 rotte distinte e 35.731 trip.
  
 Per la fase di anomaly detection è stata selezionata la rotta \texttt{WP\_135 - WP\_118},
 una delle più trafficate tra quelle estratte, percorsa da 40 imbarcazioni distinte
@@ -113,10 +121,11 @@ stato adottato come approccio principale per le fasi successive della pipeline.
 \section{Risultati quantitativi}\label{sec:res_quantitative}
  
 \subsection{Parametri del modello Weibull}
- 
+
 I parametri della distribuzione di Weibull, stimati sull'intero insieme di 184 trip
-della rotta selezionata (Sezione~\ref{ssec:meth_routes}), risultano pari a
-$m = 1{,}3105$ (parametro di scala) e $\beta = 0{,}9358$ (parametro di forma medio).
+della rotta selezionata (Sezione~\ref{sec:meth_anomaly}), risultano pari a
+$m = 1{,}3105$ (coefficiente della relazione $\alpha = m \cdot \Delta t$ 
+tra parametro di scala e intervallo temporale) e $\beta = 0{,}9358$ (parametro di forma medio).
  
 % PLACEHOLDER: inserire grafico di fitting (shape/scale stimati sui vari lag
 % temporali) a supporto dei valori riportati sopra.
