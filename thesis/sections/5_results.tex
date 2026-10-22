@@ -74,25 +74,31 @@ con i parametri descritti nella Sezione~\ref{ssec:meth_clustering}. In entrambe 
 i punti in blu sono quelli assegnati a un cluster, i punti bianchi sono quelli classificati
 come rumore, e il contorno nero di ogni cluster è il relativo \emph{convex hull}, che
 definisce l'area del waypoint. Il riquadro rosso è la bounding box dell'area di studio.
+La scala di colore indica il peso di ciascuna coordinata aggregata, pari al logaritmo in
+base 2 del numero di messaggi AIS che vi ricadono, arrotondato all'intero più vicino
+(Sezione~\ref{ssec:meth_clustering}); si tratta quindi di una grandezza adimensionale.
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{Results/DBSCAM.png}
+    \includegraphics[width=\textwidth]{Results/DBSCAN.png}
     \caption{Waypoint identificati con DBSCAN ($\varepsilon = 0.075$, $N_{\min} = 10$).}\label{fig:res_dbscan}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\textwidth]{Results/H-DBSCAM.png}
+    \includegraphics[width=\textwidth]{Results/H-DBSCAN.png}
     \caption{Waypoint identificati con H-DBSCAN ($\text{min\_cluster\_size} = 30$,
     $\text{max\_cluster\_size} = 10\,000$).}\label{fig:res_hdbscan}
 \end{figure}
 
-Il confronto mette in evidenza il limite principale di DBSCAN con un raggio $\varepsilon$
-fisso. Nell'area di Oahu, dove si trovano il porto di Honolulu e le zone di ancoraggio
+DBSCAN individua 55 cluster e classifica come rumore
+1.001 delle 51.801 coordinate aggregate (1,93\%); H-DBSCAN, eseguito sulla tabella
+espansa secondo i pesi (Sezione~\ref{ssec:meth_clustering}), individua 144 cluster e ne scarta 2.800 su 96.913
+(2,89\%). Il confronto mette in evidenza il limite principale di DBSCAN con un raggio $\varepsilon$
+fisso. Nell'area del porto di Honolulu e le zone di ancoraggio
 vicine, la densità di punti stazionari è molto alta, e DBSCAN raggruppa tutta la zona in
 un unico grande cluster che copre buona parte dell'isola. Lo stesso succede lungo la costa
-occidentale di Maui e lungo la costa di Kona sull'isola di Hawaii, dove punti di sosta
+occidentale dell'isola Maui e lungo la costa di Kona sull'isola di Hawaii, dove punti di sosta
 distinti vengono fusi in poligoni allungati. Un waypoint di queste dimensioni non è utile
 per l'estrazione delle rotte, perché fa coincidere in un solo nodo del grafo origini e
 destinazioni che invece sono diverse.
@@ -104,7 +110,6 @@ algoritmi producono cluster di dimensioni simili (ad esempio il cluster a sud-ov
 e quelli lungo il bordo settentrionale della bounding box). Per questo motivo H-DBSCAN è
 stato adottato come approccio principale per le fasi successive della pipeline.
 
-% TODO: riportare il numero di cluster prodotti da DBSCAN, da confrontare con i 144 di H-DBSCAN.
  
 \subsection{Rotte estratte}
  

@@ -43,6 +43,25 @@ _LEGEND = dict(
     maxheight=250          # px — scrollable beyond this
 )
 
+# Colorbar titles with unit of measure, indexed by column name.
+# Can also be passed to plotly express as labels=f._COLORBAR_TITLES
+# KDE densities are computed on (LON, LAT) in degrees, so each KDE is in deg^-2 and their product in deg^-4
+_COLORBAR_TITLES = {
+    'Avg_Speed': 'Avg_Speed [kn]',
+    'SOG': 'SOG [kn]',
+    'Weight': 'Weight [log<sub>2</sub>(count)]',
+    'Density': 'Density [deg<sup>-4</sup>]',
+    'Log_Density_prod': 'Log_Density_prod [-]',
+    'Normalized_Log_Density': 'Normalized_Log_Density [-]',
+    'log_prob': 'log_prob [-]'
+}
+
+def _colorbar_title(name) -> str:
+    '''returns the colorbar title (with unit of measure) of the given column name, or the name itself if unknown'''
+    if not isinstance(name, str):
+        return ''
+    return _COLORBAR_TITLES.get(name, name)
+
 if __name__ == "__main__":
     None
 
@@ -99,7 +118,7 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) 
             color=clustered['Weight'],
             colorscale='portland',
             showscale=True,
-            colorbar=dict(title='Weight')
+            colorbar=dict(title=_colorbar_title('Weight'))
         ),
         name='Clustered'
     ))
@@ -151,15 +170,21 @@ def points_plotter(clustered : p.DataFrame, not_clustered : p.DataFrame, model) 
     )
     po.plot(fig, filename='../../plot/' + filename, auto_open=True)
 
-def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) -> None:
+def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode, filename : str = None) -> None:
+    '''
+    :param str filename: name of the html file saved in plot/. Default: derived from the plotting mode
+    '''
     if inputDF.empty:
         print("No points to be plotted!")
         return
 
+    # each mode is saved to its own html file (without a filename, plotly always writes to 'temp-plot.html')
     match mode:
         case "SingleVessel":
             output_title = "MMSI: " + str(inputDF.at[inputDF.index[0], 'MMSI'])
+            default_filename = 'single_vessel_routes.html'
         case "SingleRoute":
+            default_filename = 'single_route.html'
             if type(inputDF.at[inputDF.index[0], 'Route']) == p.Series:
                 output_title = "Route: " + str(inputDF.at[inputDF.index[0], 'Route'].iloc[0])
             else:
@@ -180,7 +205,7 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
             color=inputDF['Avg_Speed'],
             colorscale='portland',
             showscale=True,
-            colorbar=dict(title='Avg_Speed')
+            colorbar=dict(title=_colorbar_title('Avg_Speed'))
         ),
         customdata=inputDF[['MMSI', 'BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus']].to_numpy(),
         hovertemplate=(
@@ -229,13 +254,14 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode) ->
         margin={'r':0, 't':40, 'l':0, 'b':0},
         legend=_LEGEND
     )
-    po.plot(fig)
+    po.plot(fig, filename='../../plot/' + (filename or default_filename), auto_open=True)
 
 def route_plot(inputDF : p.DataFrame,
                color_criteria : str,
                title : str = 'Route',
                hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus'],
-               filename : str = 'route_plot.html'
+               filename : str = 'route_plot.html',
+               colorbar_title : str = None
                ):
     '''
     plots points and colors them according to the parsed criteria
@@ -243,6 +269,7 @@ def route_plot(inputDF : p.DataFrame,
     :param str|Dataframe color_criteria: The name of the column used for coloring the points or the dataframe column itself
     :param str title: The title of the resulting plot, shown at the top
     :param list hover_data: list of strings specifying the names of the columns to show when the mouse overs on a point
+    :param str colorbar_title: title of the colorbar. Default: derived from the column name (with unit of measure, if known)
     '''
     if inputDF.empty:
         print("No points to be plotted!")
@@ -271,7 +298,9 @@ def route_plot(inputDF : p.DataFrame,
             color=final_criteria,
             colorscale='portland',
             showscale=True,
-            colorbar=dict(title=color_criteria if isinstance(color_criteria, str) else '')
+            colorbar=dict(title=colorbar_title if colorbar_title is not None
+                          else _colorbar_title(color_criteria if isinstance(color_criteria, str)
+                                               else getattr(color_criteria, 'name', None)))
         ),
         customdata=inputDF[hover_data].to_numpy(),
         hovertemplate='<br>'.join(
@@ -361,7 +390,8 @@ def route_arrows_plot(inputDF : p.DataFrame,
         lat=inputDF["LAT"],
         lon=inputDF["LON"],
         mode="markers",
-        marker=dict(size=8, color=inputDF[color_criteria], colorscale='portland', showscale=True),
+        marker=dict(size=8, color=inputDF[color_criteria], colorscale='portland', showscale=True,
+                    colorbar=dict(title=_colorbar_title(color_criteria))),
         text=inputDF["MMSI"],
         hovertemplate=(
             'MMSI: %{text}<br>' +
@@ -402,6 +432,6 @@ def plot_kde(xx : np.ndarray, yy : np.ndarray, zz : np.ndarray, fig_width : floa
     ax1.set_xlabel('Longitude')
     ax1.set_ylabel('Latitude')
     ax1.set_aspect('equal')
-    plt.colorbar(im1, ax=ax1, label='Density')
+    plt.colorbar(im1, ax=ax1, label=r'Density [deg$^{-2}$]')
     plt.tight_layout()
     return fig
