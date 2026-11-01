@@ -104,8 +104,8 @@ espansa secondo i pesi (Sezione~\ref{ssec:meth_clustering}), individua 144 clust
 (2,89\%). Il confronto mette in evidenza il limite principale di DBSCAN con un raggio $\varepsilon$
 fisso. Nell'area del porto di Honolulu e le zone di ancoraggio
 vicine, la densità di punti stazionari è molto alta, e DBSCAN raggruppa tutta la zona in
-un unico grande cluster che copre buona parte dell'isola. Lo stesso succede lungo la costa
-occidentale dell'isola Maui e lungo la costa di Kona sull'isola di Hawaii, dove punti di sosta
+un unico grande cluster che copre buona parte dell'isola di Oahu. Lo stesso succede lungo la costa
+occidentale dell'isola di Maui e lungo la costa di Kona sull'isola di Hawaii, dove punti di sosta
 distinti vengono fusi in poligoni allungati. Un waypoint di queste dimensioni non è utile
 per l'estrazione delle rotte, perché fa coincidere in un solo nodo del grafo origini e
 destinazioni che invece sono diverse.
@@ -113,7 +113,7 @@ destinazioni che invece sono diverse.
 H-DBSCAN, potendo adattarsi a densità locali diverse, scompone le stesse aree in molti
 cluster più piccoli e compatti, che corrispondono in modo più plausibile a singoli porti,
 moli e zone di ancoraggio. Nelle zone a bassa densità in mare aperto, invece, entrambi gli
-algoritmi producono cluster di dimensioni simili (ad esempio il cluster a sud-ovest di Oahu
+algoritmi producono cluster di dimensioni simili (ad esempio il cluster a sud-ovest dell'isola di Oahu
 e quelli lungo il bordo settentrionale della bounding box). Per questo motivo H-DBSCAN è
 stato adottato come approccio principale per le fasi successive della pipeline.
 
@@ -132,10 +132,17 @@ La Figura~\ref{fig:res_route_graph} mostra le rotte come archi di un grafo orien
 cui nodi sono i waypoint. Le coppie ordinate di waypoint distinti collegate da almeno un
 trip sono 557; per leggibilità sono disegnate solo le 63 rotte con almeno 10 trip, che
 coprono comunque 3.062 dei 4.089 trip del gruppo (74,9\%). Ogni freccia segue il trip
-\emph{medoide} della rotta, cioè il trip reale più simile a tutti gli altri: in questo modo
-mostra il percorso effettivamente seguito dalle navi, anche quando aggira un'isola. Il
-numero accanto a ogni freccia, qui e negli ingrandimenti della
-Figura~\ref{fig:res_route_zoom}, è il numero di trip della rotta.
+\emph{medoide} della rotta, calcolato come segue. Ogni trip della rotta viene ricampionato
+in 60 punti equidistanti lungo il suo percorso, così che tutti i trip abbiano lo stesso
+numero di punti indipendentemente dalla loro lunghezza e dalla frequenza dei messaggi AIS.
+La distanza tra due trip è la media delle distanze tra i punti corrispondenti, cioè tra
+l'$i$-esimo punto del primo e l'$i$-esimo punto del secondo. Il medoide è il trip con la
+minima somma delle distanze da tutti gli altri trip della stessa rotta; i trip formati da
+un solo punto sono esclusi dal calcolo. A differenza di una traiettoria media, il medoide
+è sempre un trip realmente percorso: se i trip di una rotta aggirano un'isola passando da
+lati diversi, la media taglierebbe attraverso l'isola, mentre il medoide segue uno dei
+percorsi effettivi. Il numero accanto a ogni freccia, qui e negli ingrandimenti che
+seguono, è il numero di trip della rotta.
 
 \begin{figure}[htbp]
     \centering
@@ -143,42 +150,37 @@ Figura~\ref{fig:res_route_zoom}, è il numero di trip della rotta.
     \caption{Grafo delle rotte tra waypoint distinti con almeno 10 trip.}\label{fig:res_route_graph}
 \end{figure}
 
-La Figura~\ref{fig:res_route_zoom} mostra un ingrandimento delle aree in cui si trovano
-le rotte più frequentate. Le prime sono \texttt{WP\_2 --- WP\_111} e
-\texttt{WP\_111 --- WP\_2} (288 e 287 trip), tra Lahaina (Maui) e la costa meridionale
-dell'isola di Lanai (Figura~\ref{fig:res_route_zoom_maui}). Il numero quasi identico di
-trip nei due versi è compatibile con un servizio di linea che fa la spola tra le due isole.
-Inoltre, il medoide segue quasi esattamente la linea tratteggiata del traghetto Maui-Lanai
-riportata sulla mappa di base. Seguono \texttt{WP\_135 --- WP\_118} e
-\texttt{WP\_118 --- WP\_135} (184 e 161 trip), tra il porto di Honolulu e quello di
-Kalaeloa (Barbers Point), sulla costa sud-occidentale di Oahu
-(Figura~\ref{fig:res_route_zoom_oahu}). Il waypoint \texttt{WP\_135}, che corrisponde al
-porto di Honolulu, è il nodo con più collegamenti (Figura~\ref{fig:res_route_zoom_honolulu}):
-da esso partono le rotte verso le altre isole (Kauai, Maui, Hawaii) e verso i cluster in
-mare aperto.
+Le rotte più frequentate sono \texttt{WP\_2 --- WP\_111} e \texttt{WP\_111 --- WP\_2}
+(288 e 287 trip), tra Lahaina, sull'isola di Maui, e la costa meridionale dell'isola di Lanai
+(Figura~\ref{fig:res_route_zoom_maui}). Il numero quasi identico di trip nei due versi è
+compatibile con un servizio di linea che fa la spola tra le due isole. Inoltre, il medoide
+segue quasi esattamente la linea tratteggiata del traghetto tra le isole di Maui e Lanai
+riportata sulla mappa di base.
 
 \begin{figure}[htbp]
     \centering
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/route_zoom_maui.png}
-        \caption{Canale tra Maui e Lanai.}\label{fig:res_route_zoom_maui}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/route_zoom_oahu.png}
-        \caption{Costa meridionale di Oahu.}\label{fig:res_route_zoom_oahu}
-    \end{subfigure}
+    \includegraphics[width=0.85\textwidth]{Results/route_zoom_maui.png}
+    \caption{Ingrandimento del grafo delle rotte sul canale tra le isole di Maui e Lanai.}\label{fig:res_route_zoom_maui}
+\end{figure}
 
-    \vspace{0.5em}
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/route_zoom_honolulu.png}
-        \caption{Porto di Honolulu (\texttt{WP\_135}).}\label{fig:res_route_zoom_honolulu}
-    \end{subfigure}
-    \caption{Ingrandimenti del grafo delle rotte di Figura~\ref{fig:res_route_graph} sulle
-    aree con le rotte più frequentate.}\label{fig:res_route_zoom}
+Seguono \texttt{WP\_135 --- WP\_118} e \texttt{WP\_118 --- WP\_135} (184 e 161 trip), tra
+il porto di Honolulu e quello di Kalaeloa (Barbers Point), sulla costa sud-occidentale
+dell'isola di Oahu (Figura~\ref{fig:res_route_zoom_oahu}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Results/route_zoom_oahu.png}
+    \caption{Ingrandimento del grafo delle rotte sulla costa meridionale dell'isola di Oahu.}\label{fig:res_route_zoom_oahu}
+\end{figure}
+
+Il waypoint \texttt{WP\_135}, che corrisponde al porto di Honolulu, è il nodo con più
+collegamenti (Figura~\ref{fig:res_route_zoom_honolulu}): da esso partono le rotte verso le
+altre isole dell'arcipelago (isole di Kauai, Maui e Hawaii) e verso i cluster in mare aperto.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Results/route_zoom_honolulu.png}
+    \caption{Ingrandimento del grafo delle rotte sul porto di Honolulu (\texttt{WP\_135}).}\label{fig:res_route_zoom_honolulu}
 \end{figure}
 
 I cluster in mare aperto si trovano in gran
@@ -193,42 +195,40 @@ svolgono interamente all'interno del waypoint e corrispondono a manovre o sposta
 all'interno di un porto o di una zona di ancoraggio; per questo motivo sono stati esclusi
 dalla visualizzazione. I trip rimanenti formano 116 rotte, di cui 17 con almeno 10 trip
 che ne coprono 1.090 (78,6\%). Poiché ogni self-loop è un percorso chiuso di forma e
-lunghezza diverse, nessuna traiettoria è rappresentativa dell'intera rotta: nella
-Figura~\ref{fig:res_self_loops} sono quindi disegnati solo i waypoint coinvolti, colorati in
-base al numero di trip che vi ritornano, con tre ingrandimenti sulle aree in cui si
-concentrano. L'etichetta \texttt{WP\_x: n} accanto a ogni waypoint ne riporta il nome e il
-numero $n$ di questi trip.
+lunghezza diverse, nessuna traiettoria è rappresentativa dell'intera rotta: sono quindi
+disegnati solo i waypoint coinvolti, colorati in base al numero di trip che vi ritornano,
+con un ingrandimento per ciascuna delle tre aree in cui si concentrano
+(Figure~\ref{fig:res_self_loops_oahu}, \ref{fig:res_self_loops_maui}
+e~\ref{fig:res_self_loops_kona}). L'etichetta \texttt{WP\_x: n} accanto a ogni waypoint ne
+riporta il nome e il numero $n$ di questi trip.
 
 \begin{figure}[htbp]
     \centering
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/self_loops1.png}
-        \caption{Oahu.}\label{fig:res_self_loops_oahu}
-    \end{subfigure}
-    \hfill
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/self_loops2.png}
-        \caption{Maui, Lanai e Molokai.}\label{fig:res_self_loops_maui}
-    \end{subfigure}
+    \includegraphics[width=0.85\textwidth]{Results/self_loops1.png}
+    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: isola di Oahu.}\label{fig:res_self_loops_oahu}
+\end{figure}
 
-    \vspace{0.5em}
-    \begin{subfigure}[b]{0.49\textwidth}
-        \centering
-        \includegraphics[width=\textwidth]{Results/self_loops3.png}
-        \caption{Costa di Kona (isola di Hawaii).}\label{fig:res_self_loops_kona}
-    \end{subfigure}
-    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano.}\label{fig:res_self_loops}
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Results/self_loops2.png}
+    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: isole di Maui,
+    Lanai e Molokai.}\label{fig:res_self_loops_maui}
+\end{figure}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Results/self_loops3.png}
+    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: costa di Kona,
+    sull'isola di Hawaii.}\label{fig:res_self_loops_kona}
 \end{figure}
 
 I due waypoint con più self-loop sono il porto di Honolulu (\texttt{WP\_135}, 327 trip,
 Figura~\ref{fig:res_self_loops_oahu}) e l'area antistante Lahaina (\texttt{WP\_111}, 278 trip,
 Figura~\ref{fig:res_self_loops_maui}). Uscite in mare con ritorno allo stesso porto sono
-tipiche di imbarcazioni da pesca, rimorchiatori e imbarcazioni turistiche, ad esempio per
-escursioni di whale watching, molto diffuse nel canale tra Maui e Lanai nel periodo
-gennaio-marzo. Sulla costa di Kona (Figura~\ref{fig:res_self_loops_kona}) il waypoint più
-attivo è quello di Kailua-Kona.
+tipiche di imbarcazioni da pesca, di rimorchiatori e delle imbarcazioni che offrono
+escursioni e altri servizi ai turisti. Sulla costa di Kona
+(Figura~\ref{fig:res_self_loops_kona}) il più attivo dei due waypoint è quello più a sud,
+in corrispondenza di Kailua-Kona.
 
 \paragraph{Rotte con un estremo non identificato.}
 Un trip ha origine o destinazione \texttt{<NA>} quando inizia o termina con un punto di
