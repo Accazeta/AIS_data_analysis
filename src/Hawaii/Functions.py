@@ -566,7 +566,7 @@ def _waypoint_names_trace(waypointsDF : p.DataFrame, names : list, labels : list
 
 def _trips_colorbar(min_trips : int, max_trips : int) -> dict:
     '''colorbar for a number of trips drawn on a log scale (tick labels in trips, not in log10)'''
-    ticks = [t for t in (10, 20, 50, 100, 200, 500, 1000) if min_trips <= t <= max_trips]
+    ticks = [t for t in (1, 2, 5, 10, 20, 50, 100, 200, 500, 1000) if min_trips <= t <= max_trips]
     return dict(title='Trip [scala log.]', tickvals=np.log10(ticks), ticktext=[str(t) for t in ticks])
 
 def route_graph_plot(inputDF : p.DataFrame,
@@ -576,6 +576,7 @@ def route_graph_plot(inputDF : p.DataFrame,
                      self_loops_must_leave : bool = True,
                      line_width : float = 4,
                      n_points : int = 60,
+                     show_labels : bool = True,
                      title : str = None,
                      filename : str = None
                      ) -> p.DataFrame:
@@ -596,6 +597,8 @@ def route_graph_plot(inputDF : p.DataFrame,
         (otherwise most of them are manoeuvres inside the waypoint). Default: True
     :param float line_width: width (px) of the arrows. Default: 4
     :param int n_points: number of points used to resample each trip (and to draw each arrow). Default: 60
+    :param bool show_labels: if False, the numbers of trips next to the arrows are not drawn (e.g. with min_trips=1,
+        where hundreds of routes would make them unreadable). Default: True
     :param str title: Default: None (no title, the plot is used in the thesis where the caption describes it)
     :param str filename: name of the html file saved in plot/. Default: 'route_graph.html' or 'route_graph_self_loops.html'
     Returns a Dataframe with the routes drawn (Origin, Destination, Trips)
@@ -637,7 +640,7 @@ def route_graph_plot(inputDF : p.DataFrame,
         trips_per_wp = dict(edges[['Origin', 'Trips']].values)
         fig.add_trace(_waypoint_names_trace(waypointsDF, used, [f'{wp}: {trips_per_wp[wp]}' for wp in used]))
     else:
-        _route_arrows(fig, edges, known, inputDF, waypointsDF, used, n_points, line_width, log_min, log_max)
+        _route_arrows(fig, edges, known, inputDF, waypointsDF, used, n_points, line_width, log_min, log_max, show_labels)
 
     fig.update_layout(
         title=title,
@@ -735,7 +738,8 @@ def _label_positions(routes : list, n_points : int, start : float = 0.25, end : 
     return result
 
 def _route_arrows(fig : go.Figure, edges : p.DataFrame, known : p.DataFrame, inputDF : p.DataFrame, waypointsDF : p.DataFrame,
-                  used : list, n_points : int, line_width : float, log_min : float, log_max : float):
+                  used : list, n_points : int, line_width : float, log_min : float, log_max : float,
+                  show_labels : bool = True):
     '''draws the routes A -> B as arrows following the medoid trip of each route, with the number of trips next to them'''
     lat_all, lon_all = inputDF['LAT'].to_numpy(), inputDF['LON'].to_numpy()
     # waypoint shapes (convex hulls) of the waypoints involved
@@ -745,6 +749,9 @@ def _route_arrows(fig : go.Figure, edges : p.DataFrame, known : p.DataFrame, inp
     for origin, dest, n_trips, color in edges[['Origin', 'Destination', 'Trips', 'Color']].values:
         # single-point trips are counted but have no path to draw
         route_sel = known[(known['Origin'] == origin) & (known['Destination'] == dest) & (known['NumPoints'] >= 2)]
+        if route_sel.empty:
+            print(f'[route_graph_plot] {origin} → {dest}: only single-point trips, not drawn')
+            continue
         paths = np.array([_resample_path(lon_all[first:last + 1], lat_all[first:last + 1], n_points)
                           for first, last in route_sel[['FirstIndex', 'LastIndex']].values])
         path = _medoid_path(paths)
@@ -779,7 +786,7 @@ def _route_arrows(fig : go.Figure, edges : p.DataFrame, known : p.DataFrame, inp
     ))
 
     labels = {}  # textposition -> (lon, lat, text) of the labels placed on that side of their arrow
-    for lon_l, lat_l, text_l, position in _label_positions(routes, n_points):
+    for lon_l, lat_l, text_l, position in (_label_positions(routes, n_points) if show_labels else []):
         group = labels.setdefault(position, ([], [], []))
         group[0].append(lon_l); group[1].append(lat_l); group[2].append(text_l)
 
@@ -793,6 +800,58 @@ def _route_arrows(fig : go.Figure, edges : p.DataFrame, known : p.DataFrame, inp
             hoverinfo='skip', showlegend=False, name='Trips'
         ))
     fig.add_trace(_waypoint_names_trace(waypointsDF, used))
+
+def self_loop_trips_plot(inputDF : p.DataFrame,
+                         waypointsDF : p.DataFrame,
+                         waypoint : str = 'WP_135',
+                         max_points_per_trip : int = 50,
+                         zoom : float = 12
+                         ) -> p.DataFrame:
+    '''
+    Plots the trajectories of all the self-loop trips (A - A) of one waypoint in two separate maps, with the same
+    centre and zoom: one with the trips that never leave the waypoint (manoeuvres inside a harbour or an anchorage
+    area) and one with the trips that leave it at least once. It shows why only the second group is used in the
+    self-loop map of route_graph_plot. Files: plot/self_loops_<waypoint>_inside.html and plot/self_loops_<waypoint>_leaving.html
+    :param Dataframe inputDF: points ordered by vessel and time. Required columns: "MMSI, LAT, LON, IsInWP, Route"
+    :param Dataframe waypointsDF: waypoints. Required columns: "Name, PolygonObj"
+    :param str waypoint: name of the waypoint. Default: 'WP_135' (Honolulu harbour)
+    :param int max_points_per_trip: each trajectory is evenly downsampled to at most this many points (first and last always kept). Default: 50
+    :param float zoom: initial zoom of the maps, centred on the waypoint. Default: 12
+    Returns a Dataframe with the number of trips of each group
+    '''
+    trips = route_trips(inputDF)
+    loops = trips[(trips['Origin'] == waypoint) & (trips['Destination'] == waypoint) & (trips['NumPoints'] >= 2)]
+    groups = [
+        ('inside', 'Trip interni al waypoint', loops[~loops['LeavesWP']], 'darkorange'),
+        ('leaving', 'Trip che escono dal waypoint', loops[loops['LeavesWP']], 'royalblue')
+    ]
+    lat_all, lon_all = inputDF['LAT'].to_numpy(), inputDF['LON'].to_numpy()
+    centre = _waypoint_centroids(waypointsDF)[waypoint]
+
+    counts = []
+    for suffix, name, selected, color in groups:
+        lat, lon = [], []
+        for first, last in selected[['FirstIndex', 'LastIndex']].values:
+            idx = np.unique(np.linspace(first, last, min(max_points_per_trip, last - first + 1)).round().astype(int))
+            lat.extend(lat_all[idx]); lat.append(np.nan)
+            lon.extend(lon_all[idx]); lon.append(np.nan)
+        print(f"[self_loop_trips_plot] {waypoint}, {name.lower()}: {len(selected)}")
+        counts.append((name, len(selected)))
+
+        fig = go.Figure()
+        fig.add_trace(_waypoint_shapes_trace(waypointsDF, [waypoint]))
+        fig.add_trace(go.Scattermap(
+            lat=lat, lon=lon, mode='lines', line=dict(width=1.5, color=color), opacity=0.6,
+            hoverinfo='skip', name=f'{name}: {len(selected)}'
+        ))
+        fig.add_trace(_waypoint_names_trace(waypointsDF, [waypoint]))
+        fig.update_layout(
+            map=dict(style=_BASEMAP_STYLE_WITH_TEXT, center=dict(lon=centre[0], lat=centre[1]), zoom=zoom),
+            margin={'r':0, 't':0, 'l':0, 'b':0},
+            legend=_LEGEND
+        )
+        _save_map(fig, f'self_loops_{waypoint}_{suffix}.html')
+    return p.DataFrame(counts, columns=['Group', 'Trips'])
 
 def na_routes_plot(inputDF : p.DataFrame,
                    waypointsDF : p.DataFrame,
