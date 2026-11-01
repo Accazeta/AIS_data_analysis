@@ -50,7 +50,7 @@ Il clustering H-DBSCAN applicato ai punti stazionari aggregati ha identificato
 I punti che ricadono in più di un waypoint, a causa della sovrapposizione degli inviluppi
 convessi, sono 7.298, pari allo 0,135\% del dataset: l'effetto della regola di assegnazione
 descritta nella Sezione~\ref{ssec:meth_routes} è quindi trascurabile. A partire da questi waypoint,
-sono state estratte in tutto 910 rotte distinte e 35.731 trip.
+sono state estratte in tutto 766 rotte distinte e 36.033 trip.
  
 Per la fase di anomaly detection è stata selezionata la rotta \texttt{WP\_135 - WP\_118},
 una delle più trafficate tra quelle estratte, percorsa da 40 imbarcazioni distinte
@@ -64,6 +64,15 @@ Questa sezione mostra gli output visivi prodotti dalla fase di Knowledge Discove
 con l'obiettivo di verificare che i waypoint e le rotte estratte corrispondano a
 strutture geograficamente coerenti con il traffico marittimo dell'arcipelago delle
 Hawaii.
+
+Tutte le mappe di questa sezione seguono le stesse convenzioni. Il riquadro rosso
+delimita il dominio di analisi, cioè la bounding box descritta nella
+Sezione~\ref{sec:meth_dataset}, e la barra in basso a destra indica la scala della mappa,
+che varia da una figura all'altra. Ogni waypoint è rappresentato dal suo inviluppo
+convesso (\emph{convex hull}), con il contorno nero; nelle mappe delle rotte accanto a ogni
+waypoint ne è riportato il nome. La barra dei colori a destra indica la grandezza
+rappresentata dal colore: il peso delle coordinate aggregate nelle mappe dei waypoint, il
+numero di trip, su scala logaritmica, in quelle delle rotte.
  
 \subsection{Waypoint identificati}
  
@@ -71,10 +80,8 @@ Le Figure~\ref{fig:res_dbscan} e~\ref{fig:res_hdbscan} mostrano i cluster di pun
 stazionari ottenuti rispettivamente con DBSCAN ($\varepsilon = 0.075$, $N_{\min} = 10$)
 e con H-DBSCAN ($\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$),
 con i parametri descritti nella Sezione~\ref{ssec:meth_clustering}. In entrambe le figure
-i punti in blu sono quelli assegnati a un cluster, i punti bianchi sono quelli classificati
-come rumore, e il contorno nero di ogni cluster è il relativo \emph{convex hull}, che
-definisce l'area del waypoint. Il riquadro rosso è la bounding box dell'area di studio.
-La scala di colore indica il peso di ciascuna coordinata aggregata, pari al logaritmo in
+i punti colorati sono quelli assegnati a un cluster e i punti bianchi quelli classificati
+come rumore. Il colore indica il peso di ciascuna coordinata aggregata, pari al logaritmo in
 base 2 del numero di messaggi AIS che vi ricadono, arrotondato all'intero più vicino
 (Sezione~\ref{ssec:meth_clustering}); si tratta quindi di una grandezza adimensionale.
 
@@ -113,10 +120,139 @@ stato adottato come approccio principale per le fasi successive della pipeline.
  
 \subsection{Rotte estratte}
  
-% PLACEHOLDER: inserire figura con la visualizzazione delle rotte estratte
-% (grafo orientato waypoint → waypoint) sovrapposta alla mappa dell'arcipelago.
-% Commentare le rotte principali emerse e la loro coerenza geografica.
- 
+Per visualizzare le rotte, i trip sono stati divisi in tre gruppi in base ai waypoint di
+origine e di destinazione: rotte tra due waypoint distinti (\texttt{WP\_A --- WP\_B}),
+rotte che tornano al waypoint di partenza (\texttt{WP\_A --- WP\_A}, nel seguito
+\emph{self-loop}) e rotte con almeno un estremo non identificato (\texttt{<NA>}).
+Dei 36.033 trip estratti, 4.089 (11,3\%) appartengono al primo gruppo, 30.981 (86,0\%) al
+secondo e 963 (2,7\%) al terzo.
+
+\paragraph{Rotte tra waypoint distinti.}
+La Figura~\ref{fig:res_route_graph} mostra le rotte come archi di un grafo orientato i
+cui nodi sono i waypoint. Le coppie ordinate di waypoint distinti collegate da almeno un
+trip sono 557; per leggibilità sono disegnate solo le 63 rotte con almeno 10 trip, che
+coprono comunque 3.062 dei 4.089 trip del gruppo (74,9\%). Ogni freccia segue il trip
+\emph{medoide} della rotta, cioè il trip reale più simile a tutti gli altri: in questo modo
+mostra il percorso effettivamente seguito dalle navi, anche quando aggira un'isola. Il
+numero accanto a ogni freccia, qui e negli ingrandimenti della
+Figura~\ref{fig:res_route_zoom}, è il numero di trip della rotta.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/route_graph.png}
+    \caption{Grafo delle rotte tra waypoint distinti con almeno 10 trip.}\label{fig:res_route_graph}
+\end{figure}
+
+La Figura~\ref{fig:res_route_zoom} mostra un ingrandimento delle aree in cui si trovano
+le rotte più frequentate. Le prime sono \texttt{WP\_2 --- WP\_111} e
+\texttt{WP\_111 --- WP\_2} (288 e 287 trip), tra Lahaina (Maui) e la costa meridionale
+dell'isola di Lanai (Figura~\ref{fig:res_route_zoom_maui}). Il numero quasi identico di
+trip nei due versi è compatibile con un servizio di linea che fa la spola tra le due isole.
+Inoltre, il medoide segue quasi esattamente la linea tratteggiata del traghetto Maui-Lanai
+riportata sulla mappa di base. Seguono \texttt{WP\_135 --- WP\_118} e
+\texttt{WP\_118 --- WP\_135} (184 e 161 trip), tra il porto di Honolulu e quello di
+Kalaeloa (Barbers Point), sulla costa sud-occidentale di Oahu
+(Figura~\ref{fig:res_route_zoom_oahu}). Il waypoint \texttt{WP\_135}, che corrisponde al
+porto di Honolulu, è il nodo con più collegamenti (Figura~\ref{fig:res_route_zoom_honolulu}):
+da esso partono le rotte verso le altre isole (Kauai, Maui, Hawaii) e verso i cluster in
+mare aperto.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/route_zoom_maui.png}
+        \caption{Canale tra Maui e Lanai.}\label{fig:res_route_zoom_maui}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/route_zoom_oahu.png}
+        \caption{Costa meridionale di Oahu.}\label{fig:res_route_zoom_oahu}
+    \end{subfigure}
+
+    \vspace{0.5em}
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/route_zoom_honolulu.png}
+        \caption{Porto di Honolulu (\texttt{WP\_135}).}\label{fig:res_route_zoom_honolulu}
+    \end{subfigure}
+    \caption{Ingrandimenti del grafo delle rotte di Figura~\ref{fig:res_route_graph} sulle
+    aree con le rotte più frequentate.}\label{fig:res_route_zoom}
+\end{figure}
+
+I cluster in mare aperto si trovano in gran
+parte lungo il bordo della bounding box e rappresentano quindi i punti in cui le navi
+entrano o escono dall'area di studio: le rotte che li raggiungono vanno lette come
+collegamenti con l'esterno dell'arcipelago più che come tratte tra due località precise.
+
+\paragraph{Rotte di ritorno al waypoint di partenza.}
+I self-loop sono la grande maggioranza dei trip, ma solo 1.387 dei 30.981 trip di questo
+gruppo (4,5\%) contengono almeno un punto esterno al waypoint di partenza. Gli altri si
+svolgono interamente all'interno del waypoint e corrispondono a manovre o spostamenti
+all'interno di un porto o di una zona di ancoraggio; per questo motivo sono stati esclusi
+dalla visualizzazione. I trip rimanenti formano 116 rotte, di cui 17 con almeno 10 trip
+che ne coprono 1.090 (78,6\%). Poiché ogni self-loop è un percorso chiuso di forma e
+lunghezza diverse, nessuna traiettoria è rappresentativa dell'intera rotta: nella
+Figura~\ref{fig:res_self_loops} sono quindi disegnati solo i waypoint coinvolti, colorati in
+base al numero di trip che vi ritornano, con tre ingrandimenti sulle aree in cui si
+concentrano. L'etichetta \texttt{WP\_x: n} accanto a ogni waypoint ne riporta il nome e il
+numero $n$ di questi trip.
+
+\begin{figure}[htbp]
+    \centering
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/self_loops1.png}
+        \caption{Oahu.}\label{fig:res_self_loops_oahu}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/self_loops2.png}
+        \caption{Maui, Lanai e Molokai.}\label{fig:res_self_loops_maui}
+    \end{subfigure}
+
+    \vspace{0.5em}
+    \begin{subfigure}[b]{0.49\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{Results/self_loops3.png}
+        \caption{Costa di Kona (isola di Hawaii).}\label{fig:res_self_loops_kona}
+    \end{subfigure}
+    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano.}\label{fig:res_self_loops}
+\end{figure}
+
+I due waypoint con più self-loop sono il porto di Honolulu (\texttt{WP\_135}, 327 trip,
+Figura~\ref{fig:res_self_loops_oahu}) e l'area antistante Lahaina (\texttt{WP\_111}, 278 trip,
+Figura~\ref{fig:res_self_loops_maui}). Uscite in mare con ritorno allo stesso porto sono
+tipiche di imbarcazioni da pesca, rimorchiatori e imbarcazioni turistiche, ad esempio per
+escursioni di whale watching, molto diffuse nel canale tra Maui e Lanai nel periodo
+gennaio-marzo. Sulla costa di Kona (Figura~\ref{fig:res_self_loops_kona}) il waypoint più
+attivo è quello di Kailua-Kona.
+
+\paragraph{Rotte con un estremo non identificato.}
+Un trip ha origine o destinazione \texttt{<NA>} quando inizia o termina con un punto di
+\emph{entry} o \emph{exit} che non ricade in alcun waypoint. La Figura~\ref{fig:res_na_routes}
+mostra le traiettorie dei 455 trip con origine ignota (in blu) e dei 473 con destinazione
+ignota (in arancione); i 35 trip in cui entrambi gli estremi sono ignoti non sono
+disegnati, perché non sono collegati ad alcun waypoint. Poiché \texttt{<NA>} non ha una
+posizione, per questi trip non è possibile calcolare un medoide e vengono disegnate le
+singole traiettorie, con un marcatore bianco sul primo punto e uno nero sull'ultimo.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/na_routes_graph.png}
+    \caption{Trip con origine ignota (\texttt{<NA>} $\rightarrow$ WP, in blu) e con destinazione
+    ignota (WP $\rightarrow$ \texttt{<NA>}, in arancione).}\label{fig:res_na_routes}
+\end{figure}
+
+Più di tre quarti di questi trip (710 su 928) partono o arrivano al porto di Honolulu
+(\texttt{WP\_135 --- <NA>}: 367 trip, \texttt{<NA> --- WP\_135}: 343 trip). Gli estremi
+ignoti si dividono in due gruppi: una parte si trova sul bordo della bounding box e
+corrisponde a navi che entrano o escono dall'area di studio; gli altri sono sparsi in mare
+aperto e corrispondono a soste che non sono state assegnate ad alcun cluster, perché
+classificate come rumore da H-DBSCAN o troppo isolate per formare un waypoint.
+
 \subsection{Trip sulla rotta selezionata}
  
 % PLACEHOLDER: inserire figura con la visualizzazione dei 184 trip associati
