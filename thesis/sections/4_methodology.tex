@@ -213,8 +213,8 @@ Le colonne \texttt{VesselName}, \texttt{IMO} e \texttt{CallSign} vengono convert
 \texttt{object} a\\ \texttt{Pandas.StringDtype}. Questa operazione non produce un risparmio di
 memoria significativo, ma garantisce una gestione più corretta dei valori mancanti. Poiché
 queste tre colonne non vengono utilizzate nelle elaborazioni successive, non sono incluse
-in tabella. Grazie alle conversioni effettuate, il dataset si riduce da circa 702 MB a
-circa 465 MB, con un risparmio prossimo al 34\%.
+in tabella. Grazie alle conversioni effettuate, l'occupazione in memoria del dataset si riduce da
+circa 702 MB a circa 465 MB, con un risparmio prossimo al 34\%.
 
 \subsection{Calcolo della velocità media e classificazione degli stati}\label{ssec:meth_status}
  
@@ -222,6 +222,11 @@ Una volta completata la fase di importazione e pulizia, l'analisi viene condotta
 il valore di \texttt{MMSI} per distinguerle tra loro.
 Per ciascuna nave viene costruito un \texttt{DataFrame} separato, ordinato cronologicamente per \texttt{BaseDateTime} e contenente
 tutti messaggi che quell'imbarcazione ha generato nel periodo di analisi all'interno dell'area geografica analizzata.
+Prima di questa suddivisione vengono eliminati i record che hanno la stessa coppia
+(\texttt{MMSI}, \texttt{BaseDateTime}) di un altro record, conservando il primo: due posizioni
+della stessa nave con lo stesso timestamp darebbero un intervallo di tempo nullo nel calcolo
+della velocità. Nel dataset analizzato si tratta di 5 record, che portano il totale da
+5.415.168 a 5.415.163.
 Per ogni coppia di punti consecutivi appartenenti alla stessa nave viene calcolata la velocità media \texttt{Avg\_Speed},
 come rapporto tra la distanza percorsa e l'intervallo di tempo trascorso. La distanza viene calcolata sfruttando la formula
 della \emph{Great-Circle Distance}, che tiene conto della curvatura terrestre usando come raggio della Terra il raggio equatoriale definito
@@ -270,7 +275,8 @@ Le restanti due categorie vengono assegnate in una seconda fase, sui punti che n
 Al termine, il primo punto di ciascuna traiettoria viene forzato a \emph{entry} e l'ultimo a \emph{exit},
 indipendentemente dallo status eventualmente già calcolato. Quando più punti consecutivi risultano tutti \emph{entry} o tutti
 \emph{exit} (situazione possibile in presenza di gap ravvicinati) viene conservato solo l'ultimo punto
-\emph{entry} della sequenza e il primo punto \emph{exit}, eliminando i rimanenti.
+\emph{entry} della sequenza e il primo punto \emph{exit}, eliminando i rimanenti. Nel dataset
+analizzato questa regola elimina 27 record, relativi a 24 navi.
 
 %-----------------------------------------------------------------------------------------------------------
 \section{Implementazione del framework TREAD e differenze rispetto all'originale}\label{sec:meth_algorithm}
@@ -335,7 +341,11 @@ punti stazionari processati è pari a circa 3.770.000 righe.
 \subsubsection{DBSCAN}
  
 L'algoritmo DBSCAN viene eseguito con i parametri $\varepsilon = 0.075$ e $N_{\min} = 10$, scelti empiricamente 
-in modo da produrre cluster geograficamente coerenti con i porti e i punti di passaggio dell'arcipelago delle Hawaii. 
+in modo da produrre cluster geograficamente coerenti con i porti e i punti di passaggio dell'arcipelago delle Hawaii.
+Il parametro $\varepsilon$ è il raggio dell'intorno considerato attorno a ogni punto, uguale in tutta l'area di studio;
+poiché le distanze sono calcolate direttamente su latitudine e longitudine, è espresso in gradi e corrisponde a circa 8 km.
+$N_{\min}$ è il peso complessivo minimo che deve ricadere nell'intorno di un punto perché questo sia considerato
+il nucleo di un cluster; essendo l'input la tabella aggregata, ogni coordinata contribuisce con il proprio peso. 
 Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferimento per il confronto con la variante H-DBSCAN\@.
 
 \subsubsection{H-DBSCAN}
@@ -352,7 +362,17 @@ distinta dall'implementazione inclusa in scikit-learn.} non consente di associar
 la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso calcolato in precedenza applicando il logaritmo. 
 La tabella espansa conta circa 97.000 righe, ossia poco meno del doppio della tabella utilizzata come input per l'algoritmo DBSCAN\@. 
 Infine, H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
-e $\text{cluster\_selection\_epsilon} = 0.01$.
+e $\text{cluster\_selection\_epsilon} = 0.01$, scelti empiricamente con lo stesso criterio usato per DBSCAN.
+Il parametro $\text{min\_cluster\_size}$ è il numero minimo di punti che un cluster deve contenere: le aggregazioni
+più piccole vengono classificate come rumore. $\text{max\_cluster\_size}$ è il numero massimo di punti di un cluster
+e impedisce che nelle aree più dense si formi un unico cluster molto esteso. $\text{cluster\_selection\_epsilon}$ è
+una distanza, espressa in gradi come $\varepsilon$ e pari a circa 1 km, al di sotto della quale cluster vicini vengono
+uniti, evitando di frammentare una stessa area in molti cluster di piccole dimensioni.
+I parametri dei due algoritmi non hanno una corrispondenza diretta: H-DBSCAN non usa un raggio fisso come
+$\varepsilon$, ma si adatta alla densità locale dei punti, e i suoi parametri pongono solo dei limiti alla dimensione
+e alla separazione dei cluster. Anche $N_{\min}$ e $\text{min\_cluster\_size}$, pur esprimendo entrambi una quantità
+minima di punti, non sono confrontabili: il primo si riferisce all'intorno di un singolo punto, il secondo
+all'intero cluster.
 
 \subsection{Costruzione dei waypoint e identificazione delle rotte}\label{ssec:meth_routes}
  
@@ -399,8 +419,9 @@ fondamentali. Una \textbf{rotta} è un'entità astratta che modella il fatto che
 nave ha viaggiato dal waypoint di partenza a quello di arrivo (e non il viceversa).
 Ipotizzando di modellare i waypoint come nodi di un grafo orientato, una rotta sarebbe uno degli archi.
 Un \textbf{trip} indica invece il singolo viaggio compiuto da una specifica nave lungo una rotta. 
-A ogni rotta possono quindi essere associati più trip, tanti quante sono le navi che l'hanno percorsa nel
-periodo analizzato.
+A ogni rotta possono quindi essere associati più trip, anche della stessa nave, che può percorrere
+la stessa rotta più volte nel periodo analizzato: il numero di trip di una rotta è quindi maggiore
+o uguale al numero di navi che l'hanno percorsa.
 
 La fase di anomaly detection segue le equazioni del framework TREAD originale~\cite{pallotta}.
  L'analisi si concentra su una singola rotta selezionata (una delle più trafficate tra quelle estratte nella fase precedente) 
@@ -479,10 +500,16 @@ sull'insieme dei valori ottenuti ai diversi lag; il parametro di forma $\beta$ �
 Ad ogni trip viene infine assegnato un punteggio di anomalia come log-somma normalizzata 
 delle probabilità di transizione lungo la traiettoria (equazione~9 di~\cite{pallotta}), 
 combinata con la log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori della rotta (equazione~4).
-Quest'ultima è stimata, come in~\cite{pallotta}, come il rapporto tra il numero di navi distinte
-che percorrono la rotta e il numero totale di navi considerate. Poiché l'analisi è condotta su
-una sola rotta, la probabilità a priori risulta pari a 1 per tutti i trip e non influisce sul ranking;
-il termine viene comunque mantenuto nell'implementazione per consentire l'estensione dell'analisi a più rotte.
+Quest'ultima è stimata come il rapporto tra il numero di navi distinte che percorrono la rotta
+e il numero di navi distinte presenti nelle rotte analizzate. Questo denominatore si discosta
+da~\cite{pallotta}, dove la stessa grandezza è rapportata al numero totale di navi del dataset.
+Poiché l'analisi è condotta su una sola rotta, numeratore e denominatore coincidono e la
+probabilità a priori risulta pari a 1 per tutti i trip. Con il denominatore di~\cite{pallotta}
+varrebbe invece 40/403, cioè circa 0,099. La scelta non influisce però sul ranking: il
+denominatore è lo stesso per tutte le rotte e per tutti i trip, quindi cambiarlo aggiunge
+la stessa costante al punteggio di ogni trip, che è una somma di logaritmi. Il termine viene comunque mantenuto
+nell'implementazione per consentire l'estensione dell'analisi a più rotte, nel qual caso
+assume valori diversi per ciascuna rotta.
 I trip con punteggio più basso sono classificati come potenzialmente anomali.
 
 
