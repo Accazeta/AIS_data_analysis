@@ -497,9 +497,14 @@ tramite \texttt{scipy.stats.weibull\_min}.
 Il parametro di scala $\alpha_k = m \cdot \Delta t$ viene stimato tramite regressione lineare 
 sull'insieme dei valori ottenuti ai diversi lag; il parametro di forma $\beta$ è preso come media dei valori stimati.
  
-Ad ogni trip viene infine assegnato un punteggio di anomalia come log-somma normalizzata 
-delle probabilità di transizione lungo la traiettoria (equazione~9 di~\cite{pallotta}), 
-combinata con la log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori della rotta (equazione~4).
+Ad ogni trip viene infine assegnato un punteggio di anomalia. La componente legata al moto è
+il logaritmo della probabilità della sequenza di stati, cioè la somma dei logaritmi delle
+probabilità di transizione lungo la traiettoria (equazione~9 di~\cite{pallotta}), divisa per
+il numero di transizioni. Questa normalizzazione, assente nell'originale, rende confrontabili
+trip di lunghezza diversa: senza di essa i trip più lunghi otterrebbero punteggi più bassi
+solo per il maggior numero di termini nella somma. Questa componente viene combinata con la
+log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori
+della rotta (equazione~4).
 Quest'ultima è stimata come il rapporto tra il numero di navi distinte che percorrono la rotta
 e il numero di navi distinte presenti nelle rotte analizzate. Questo denominatore si discosta
 da~\cite{pallotta}, dove la stessa grandezza è rapportata al numero totale di navi del dataset.
