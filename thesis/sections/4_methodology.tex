@@ -490,8 +490,9 @@ diviso per $\cos(\mathrm{lat})$.
 La distanza $\Delta p$, espressa in metri, è infine calcolata in maniera analoga a quanto descritto
 nella Sezione~\ref{ssec:meth_status}.
 I parametri $m$ e $\beta$ del modello sono stimati sull'intero insieme di trip disponibili.
-I parametri vengono stimati calcolando, per un insieme di lag temporali adattativi 
-(da un minimo di 30 s a un massimo di un quinto della durata mediana dei trip), 
+I parametri vengono stimati calcolando, per 11 lag temporali adattativi ed equidistanti
+(da un minimo pari al maggiore tra 30 s e un ventesimo della durata del trip più breve
+a un massimo pari al minore tra un quinto della durata mediana dei trip e un'ora), 
 le distribuzioni delle distanze $\Delta p$ e fittando su ciascuna una distribuzione di Weibull 
 tramite \texttt{scipy.stats.weibull\_min}. 
 Il parametro di scala $\alpha_k = m \cdot \Delta t$ viene stimato tramite regressione lineare 

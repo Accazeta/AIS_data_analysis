@@ -306,9 +306,36 @@ I parametri della distribuzione di Weibull, stimati sull'intero insieme di 184 t
 della rotta selezionata (Sezione~\ref{sec:meth_anomaly}), risultano pari a
 $m = 1{,}3105$ (coefficiente della relazione $\alpha = m \cdot \Delta t$ 
 tra parametro di scala e intervallo temporale) e $\beta = 0{,}9358$ (parametro di forma medio).
- 
-% PLACEHOLDER: inserire grafico di fitting (shape/scale stimati sui vari lag
-% temporali) a supporto dei valori riportati sopra.
+I lag temporali utilizzati sono 11, equidistanti, da 252 s (4,2 minuti) a 1.679 s (28 minuti).
+Per ciascun lag la Figura~\ref{fig:res_weibull_fit} mostra la distribuzione delle distanze
+$\Delta p$ tra posizione prevista e posizione osservata, insieme alla distribuzione di Weibull
+stimata. Il parametro di forma passa da 0,87 per il lag più breve a 1,03 per il più lungo; il
+parametro di scala cresce da circa 125 m a circa 2.551 m.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/weibull_fit.png}
+    \caption{Distribuzioni delle distanze $\Delta p$ tra posizione prevista e posizione osservata
+    per ciascun lag temporale, con la distribuzione di Weibull stimata.}\label{fig:res_weibull_fit}
+\end{figure}
+
+La Figura~\ref{fig:res_weibull_regression} mostra a sinistra i parametri di scala stimati ai
+diversi lag e la retta $\alpha = m \cdot \Delta t$ ottenuta per regressione, a destra le
+probabilità di transizione (equazione~14 di~\cite{pallotta}) che ne derivano per tre lag.
+La relazione lineare ipotizzata da~\cite{pallotta} descrive i dati solo in modo
+approssimativo: i parametri di scala crescono più che linearmente con il lag, per cui la retta
+sovrastima $\alpha$ per i lag brevi e lo sottostima per quelli lunghi. Anche il parametro di
+forma, che nel modello originale è considerato pressoché costante, aumenta al crescere del
+lag. Relazioni alternative tra parametro di scala e intervallo temporale potrebbero essere
+esplorate in sviluppi futuri del lavoro.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/weibull_regression.png}
+    \caption{A sinistra, parametri di scala stimati ai diversi lag e retta di regressione
+    $\alpha = m \cdot \Delta t$; a destra, probabilità di transizione per tre lag
+    temporali.}\label{fig:res_weibull_regression}
+\end{figure}
  
 \subsection{Anomaly scoring e ranking dei trip}
  
