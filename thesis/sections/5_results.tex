@@ -294,12 +294,85 @@ classificate come rumore da H-DBSCAN perché troppo isolate per formare un waypo
 
 \subsection{Trip sulla rotta selezionata}
  
-% PLACEHOLDER: inserire figura con la visualizzazione dei 184 trip associati
-% alla rotta selezionata WP_135 - WP_118.
+La Figura~\ref{fig:res_selected_trips} mostra i punti dei 184 trip della rotta selezionata
+\texttt{WP\_135 - WP\_118}, dal porto di Honolulu a Kalaeloa, lungo la costa meridionale
+dell'isola di Oahu. Ogni punto è colorato in base alla velocità media \texttt{Avg\_Speed}
+(Sezione~\ref{ssec:meth_status}) ed è accompagnato da una freccia grigia, orientata secondo la
+rotta sul fondo (\texttt{COG}) e di lunghezza proporzionale alla velocità media. Per contenere il
+tempo di visualizzazione, la mappa mostra un campione casuale uniforme di 5.000 dei 20.241 punti
+della rotta. La maggior parte dei punti si concentra in un corridoio parallelo alla costa, con
+velocità più basse in prossimità dei due porti; alcuni trip se ne discostano, allontanandosi
+verso il largo prima di raggiungere la destinazione.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/selected_trips_full.png}
+    \caption{Punti dei 184 trip della rotta \texttt{WP\_135 - WP\_118}, colorati in base alla
+    velocità media (campione di 5.000 punti su 20.241).}\label{fig:res_selected_trips}
+\end{figure}
+
+Alla scala della Figura~\ref{fig:res_selected_trips} le frecce sono troppo corte rispetto alla
+dimensione dei punti e non risultano visibili. Per questo motivo la
+Figura~\ref{fig:res_selected_trips_zoom} riporta un ingrandimento del tratto iniziale della
+rotta, dal canale di accesso al porto di Honolulu fino al mare aperto, in cui si può apprezzare
+la direzione del moto: le frecce sono rivolte verso sud-ovest e poi verso ovest, in accordo con
+il verso di percorrenza della rotta.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Results/selected_trips_zoom.png}
+    \caption[Ingrandimento della rotta selezionata all'uscita dal porto di Honolulu.]{Ingrandimento della Figura~\ref{fig:res_selected_trips} all'uscita dal porto di
+    Honolulu: le frecce indicano la direzione del moto, con lunghezza proporzionale alla velocità
+    media.}\label{fig:res_selected_trips_zoom}
+\end{figure}
  
 % ─────────────────────────────────────────────
 \section{Risultati quantitativi}\label{sec:res_quantitative}
- 
+
+\subsection{KDE}\label{ssec:res_kde}
+
+Le due KDE descritte nella Sezione~\ref{ssec:meth_kde} sono state stimate sui 20.241 punti
+della rotta selezionata e valutate su una griglia regolare che copre l'area occupata dai punti.
+La Figura~\ref{fig:res_kde_spatial} mostra la KDE spaziale: la densità è massima all'uscita del
+porto di Kalaeloa, dove arriva a circa 110 deg$^{-2}$, e resta elevata lungo il corridoio
+parallelo alla costa e all'imbocco del porto di Honolulu; al di fuori del corridoio è prossima
+a zero.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/kde_spatial.png}
+    \caption{KDE spaziale dei punti della rotta \texttt{WP\_135 - WP\_118}.}\label{fig:res_kde_spatial}
+\end{figure}
+
+La KDE pesata per la velocità (Figura~\ref{fig:res_kde_speed}) ha la stessa forma, ma il
+massimo si sposta sul tratto centrale del corridoio, dove le navi navigano alla velocità di
+crociera, mentre in prossimità dei due porti, dove le velocità sono più basse, la densità
+diminuisce.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/kde_speed.png}
+    \caption{KDE dei punti della rotta \texttt{WP\_135 - WP\_118} pesata per la velocità
+    (\texttt{SOG}).}\label{fig:res_kde_speed}
+\end{figure}
+
+Il prodotto delle due KDE fornisce la densità $p_i$ di ogni punto, da cui si ottiene la somma
+$L_i$ dei logaritmi delle densità nell'intorno di 500 m (Sezione~\ref{ssec:meth_kde}),
+riportata in Figura~\ref{fig:res_log_kde_map}. I valori più alti, fino a circa 9.000, si
+trovano nel canale di accesso al porto di Kalaeloa e, in misura minore, in quello di Honolulu:
+qui le navi rallentano e i punti si addensano, per cui ogni intorno contiene molti punti. Lungo
+il corridoio $L_i$ vale tra circa 1.000 e 2.000, mentre i punti dei trip che si allontanano
+verso il largo hanno valori prossimi a zero. Sono questi punti ad abbassare il termine di
+osservazione dei trip corrispondenti, che occupano infatti le ultime posizioni del ranking
+(Sezione~\ref{ssec:res_scoring}).
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/log_kde_map.png}
+    \caption{Somma $L_i$ dei logaritmi delle densità nell'intorno di 500 m di ogni punto della
+    rotta \texttt{WP\_135 - WP\_118}.}\label{fig:res_log_kde_map}
+\end{figure}
+
 \subsection{Parametri del modello Weibull}
 
 I parametri della distribuzione di Weibull, stimati sull'intero insieme di 184 trip
@@ -337,23 +410,75 @@ esplorate in sviluppi futuri del lavoro.
     temporali.}\label{fig:res_weibull_regression}
 \end{figure}
  
-\subsection{Anomaly scoring e ranking dei trip}
+\subsection{Anomaly scoring e ranking dei trip}\label{ssec:res_scoring}
  
-Applicando il modello ai 184 trip della rotta selezionata, i dieci trip con probabilità
-combinata più alta (comportamento più regolare) sono, in ordine decrescente: i trip
-23184, 24337, 23474, 8857, 11128, 14569, 8374, 15733, 25609 e 11307, con punteggi
-compresi tra 3134,05 e 2534,98.
- 
-I dieci trip con probabilità combinata più bassa (candidati più probabili come
-anomalie) sono, in ordine crescente di punteggio: il trip 3372, il più anomalo, con
-punteggio 211,39, seguito dai trip 3413, 3362, 10288, 30627, 10279, 24701, 7889, 30752
-e 28433, con punteggi fino a 1196,21.
- 
-% PLACEHOLDER: inserire tabella riassuntiva con tutti i punteggi, e/o grafico
-% della distribuzione dei punteggi sull'intera rotta.d
-% PLACEHOLDER: inserire visualizzazione mappale dei trip con punteggio più
-% basso sovrapposta a quella dei trip normali, per evidenziare visivamente
-% le deviazioni.
+Applicando il modello ai 184 trip della rotta selezionata si ottiene un punteggio per ciascun
+trip. I punteggi vanno da 211,39 a 3.134,05, con media pari a 1.994,39 e deviazione standard
+pari a 458,45. La Tabella~\ref{tab:res_score_ranking} riporta i dieci trip con punteggio più alto,
+cioè con il comportamento più regolare, e i dieci con punteggio più basso, che sono i candidati
+più probabili come anomalie. Il trip più anomalo è il 3372, con un punteggio nettamente inferiore a
+quello del secondo trip della lista (211,39 contro 385,96 del trip 3413).
+
+\begin{table}[htbp]
+\centering
+\caption{I dieci trip con punteggio più alto e i dieci con punteggio più basso sulla rotta
+\texttt{WP\_135 - WP\_118}.}\label{tab:res_score_ranking}
+\begin{tabular}{rrrcrr}
+\toprule
+& \multicolumn{2}{c}{\textbf{Punteggio più alto}} & & \multicolumn{2}{c}{\textbf{Punteggio più basso}} \\
+\cmidrule{2-3} \cmidrule{5-6}
+\textbf{Pos.} & \textbf{Trip} & \textbf{Punteggio} & & \textbf{Trip} & \textbf{Punteggio} \\
+\midrule
+1  & 23184 & 3.134,05 & & 3372  & 211,39   \\
+2  & 24337 & 2.965,51 & & 3413  & 385,96   \\
+3  & 23474 & 2.952,94 & & 3362  & 420,81   \\
+4  & 8857  & 2.856,19 & & 10288 & 468,32   \\
+5  & 11128 & 2.724,76 & & 30627 & 712,32   \\
+6  & 14569 & 2.651,54 & & 10279 & 733,16   \\
+7  & 8374  & 2.618,94 & & 24701 & 814,71   \\
+8  & 15733 & 2.596,34 & & 7889  & 942,09   \\
+9  & 25609 & 2.577,47 & & 30752 & 1.014,65 \\
+10 & 11307 & 2.534,98 & & 28433 & 1.196,21 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La Figura~\ref{fig:res_score_distribution} mostra la distribuzione dei punteggi sui 184 trip:
+a sinistra la sola componente legata alla sequenza degli stati, cioè la log-probabilità delle
+transizioni normalizzata per il numero di transizioni del trip, a destra il punteggio di
+anomalia complessivo. La componente della sequenza degli stati varia tra $-0{,}78$ e
+$-0{,}12$, con un solo trip nettamente separato dagli altri in corrispondenza del valore
+minimo. Il punteggio complessivo si concentra tra circa 1.500 e 2.500, con il massimo della
+distribuzione tra 2.000 e 2.250, e presenta una coda più lunga verso i valori bassi, in cui
+ricadono i trip candidati come anomalie. L'intervallo di variazione della componente della
+sequenza degli stati è più piccolo di oltre tre ordini di grandezza rispetto a quello del
+punteggio complessivo: il ranking dei trip è quindi determinato quasi interamente dalla
+log-probabilità di osservazione derivata dalla KDE.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/score_distribution.png}
+    \caption{Distribuzione sui 184 trip della rotta selezionata della log-probabilità
+    normalizzata della sequenza di stati (a sinistra) e del punteggio di anomalia (a
+    destra).}\label{fig:res_score_distribution}
+\end{figure}
+La Figura~\ref{fig:res_score_trips_map} mette a confronto sulla mappa i cinque trip con
+punteggio più alto e i cinque con punteggio più basso, colorati in base al punteggio. I primi,
+in rosso, seguono traiettorie quasi sovrapposte lungo il corridoio principale della rotta
+(Figura~\ref{fig:res_selected_trips}), dall'uscita del porto di Honolulu fino all'ingresso del
+porto di Kalaeloa. I secondi, in blu, se ne discostano in modo evidente: un trip compie un ampio
+giro al largo a nord-ovest di Kalaeloa prima di entrare in porto, uno si allontana dalla costa
+verso sud per più di 10 km prima di tornare indietro, mentre gli altri seguono percorsi più
+vicini alla costa o con cambi di direzione lungo il tragitto. I trip classificati come più
+anomali corrispondono quindi a traiettorie visibilmente diverse da quella tipica della rotta.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/score_trips_map.png}
+    \caption{I cinque trip con punteggio più alto (in rosso) e i cinque con punteggio più
+    basso (in blu) sulla rotta \texttt{WP\_135 - WP\_118}, colorati in base al
+    punteggio.}\label{fig:res_score_trips_map}
+\end{figure}
  
 \subsection{Metriche di valutazione}
  

@@ -451,7 +451,7 @@ tra le componenti diventa instabile. Per questi motivi, nella presente implement
 $\theta$, ottenendo un codice più semplice ed efficiente.
 
 
-\subsection{Stima della densità tramite Kernel Density Estimation}
+\subsection{Stima della densità tramite Kernel Density Estimation}\label{ssec:meth_kde}
  
 Per modellare il comportamento normale di una rotta, viene stimata la distribuzione spaziale 
 dei punti tramite \emph{Kernel Density Estimation} (KDE) bivariata sui valori di latitudine e Longitudine 
@@ -460,6 +460,28 @@ Viene inoltre calcolata una seconda KDE, pesata per la magnitudine della velocit
 che cattura le zone dove le navi transitano tipicamente a velocità elevate. 
 Il prodotto punto per punto delle due KDE (equazione~8 di~\cite{pallotta}) fornisce per ogni punto del dataset 
 un valore di densità $p_i$ che combina informazione spaziale e cinematica.
+
+Per passare dalla densità dei singoli punti a un termine di osservazione, si considera attorno a ogni
+punto $i$ della rotta un intorno di raggio $d = 500$~m, che corrisponde alla regione di stato
+dell'equazione~7 di~\cite{pallotta}: l'insieme $N_i$ dei punti della rotta la cui distanza da $i$,
+calcolata con la Great-Circle Distance, è inferiore a $d$. In figura~\ref{fig:regions_test} è
+riportato, in rosso, l'intorno di un punto della rotta selezionata scelto a caso. A ogni punto viene associata la somma dei
+logaritmi delle densità dei punti del suo intorno,
+\[
+    L_i = \sum_{j \in N_i} \log p_j ,
+\]
+e il termine di osservazione di un trip è la media dei valori $L_i$ dei suoi punti. Questa
+formulazione si discosta da~\cite{pallotta}, dove l'intorno serve a stimare la probabilità del
+vettore osservato a partire dai soli punti vicini. Poiché le densità, espresse in deg$^{-4}$, sono
+in gran parte maggiori di 1, i loro logaritmi sono positivi e $L_i$ cresce con il numero di punti
+nell'intorno: il termine premia quindi i punti che si trovano nelle zone più frequentate della rotta.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Methodology/regions_test.png}
+    \caption{Punti della rotta selezionata (in grigio) e intorno di raggio $d = 500$~m di un punto
+    scelto a caso (in rosso).}\label{fig:regions_test}
+\end{figure}
 
 
 \subsection{Classificazione dei trip per lunghezza}

@@ -49,13 +49,13 @@ _LEGEND = dict(
 # Can also be passed to plotly express as labels=f._COLORBAR_TITLES
 # KDE densities are computed on (LON, LAT) in degrees, so each KDE is in deg^-2 and their product in deg^-4
 _COLORBAR_TITLES = {
-    'Avg_Speed': 'Avg_Speed [kn]',
+    'Avg_Speed': 'Velocità media [kn]',
     'SOG': 'SOG [kn]',
     'Weight': 'Peso',
-    'Density': 'Density [deg<sup>-4</sup>]',
-    'Log_Density_prod': 'Log_Density_prod [-]',
+    'Density': 'Densità [deg<sup>-4</sup>]',
+    'Log_Density_prod': 'Somma dei log-densità [-]',
     'Normalized_Log_Density': 'Normalized_Log_Density [-]',
-    'log_prob': 'log_prob [-]'
+    'log_prob': 'Punteggio [-]'
 }
 
 def _colorbar_title(name) -> str:
@@ -308,18 +308,20 @@ def plot_routes(inputDF : p.DataFrame, clusteredPointsDF : p.DataFrame, mode, fi
 
 def route_plot(inputDF : p.DataFrame,
                color_criteria : str,
-               title : str = 'Rotta',
+               title : str = None,
                hover_data : list = ['BaseDateTime', 'Avg_Speed', 'Route', 'EstimatedStatus'],
                filename : str = 'route_plot.html',
-               colorbar_title : str = None
+               colorbar_title : str = None,
+               selected_name : str = 'Punti selezionati'
                ):
     '''
     plots points and colors them according to the parsed criteria
     :param p.Dataframe inputDF: Dataframe with all the info about points. Required columns: 'BaseDateTime','LON','LAT','Avg_Speed','EstimatedStatus','Route'
     :param str|Dataframe color_criteria: The name of the column used for coloring the points or the dataframe column itself
-    :param str title: The title of the resulting plot, shown at the top
+    :param str title: The title of the resulting plot, shown at the top. Default: None (no title, the plot is used in the thesis where the caption describes it)
     :param list hover_data: list of strings specifying the names of the columns to show when the mouse overs on a point
     :param str colorbar_title: title of the colorbar. Default: derived from the column name (with unit of measure, if known)
+    :param str selected_name: legend label of the True points when color_criteria is a boolean mask
     '''
     if inputDF.empty:
         print("No points to be plotted!")
@@ -337,35 +339,56 @@ def route_plot(inputDF : p.DataFrame,
             print('Wrong color_criteria type')
             return
 
+    # boolean criteria (e.g. the points inside a region): two colours, no colorbar
+    is_bool = np.asarray(final_criteria).dtype == bool
+
     fig = go.Figure()
 
-    fig.add_trace(go.Scattermap(
-        lat=inputDF['LAT'],
-        lon=inputDF['LON'],
-        mode='markers',
-        marker=dict(
-            size=6,
-            color=final_criteria,
-            colorscale='portland',
-            showscale=True,
-            colorbar=dict(title=colorbar_title if colorbar_title is not None
-                          else _colorbar_title(color_criteria if isinstance(color_criteria, str)
-                                               else getattr(color_criteria, 'name', None)))
-        ),
-        customdata=inputDF[hover_data].to_numpy(),
-        hovertemplate='<br>'.join(
-            [f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(hover_data)]
-        ) + '<extra></extra>',
-        name='Punti della rotta'
-    ))
+    hovertemplate = '<br>'.join(
+        [f'{col}: %{{customdata[{i}]}}' for i, col in enumerate(hover_data)]
+    ) + '<extra></extra>'
 
-    # add domain border
+    if is_bool:
+        # one trace per class, the selected points last so that they are drawn on top
+        mask = np.asarray(final_criteria)
+        for sel, colour, label in [(~mask, '#404040', 'Punti della rotta'),
+                                   (mask, 'red', selected_name)]:
+            fig.add_trace(go.Scattermap(
+                lat=inputDF['LAT'][sel],
+                lon=inputDF['LON'][sel],
+                mode='markers',
+                marker=dict(size=6, color=colour),
+                customdata=inputDF[hover_data].to_numpy()[sel],
+                hovertemplate=hovertemplate,
+                name=label
+            ))
+    else:
+        fig.add_trace(go.Scattermap(
+            lat=inputDF['LAT'],
+            lon=inputDF['LON'],
+            mode='markers',
+            marker=dict(
+                size=6,
+                color=final_criteria,
+                colorscale='portland',
+                colorbar=dict(title=colorbar_title if colorbar_title is not None
+                              else _colorbar_title(color_criteria if isinstance(color_criteria, str)
+                                                   else getattr(color_criteria, 'name', None)))
+            ),
+            customdata=inputDF[hover_data].to_numpy(),
+            hovertemplate=hovertemplate,
+            name='Punti della rotta'
+        ))
+
+    # add domain border (not in the legend: at the zoom of these maps the border is
+    # usually out of view and its red line would be confused with red points)
     fig.add_trace(go.Scattermap(
         mode='lines',
         lon=[c.LON_MIN, c.LON_MIN, c.LON_MAX, c.LON_MAX, c.LON_MIN],
         lat=[c.LAT_MIN, c.LAT_MAX, c.LAT_MAX, c.LAT_MIN, c.LAT_MIN],
         line=dict(width=2, color='red'),
-        name='Dominio di analisi'
+        name='Dominio di analisi',
+        showlegend=False
     ))
 
     fig.update_layout(
@@ -375,15 +398,16 @@ def route_plot(inputDF : p.DataFrame,
             center=dict(lat=inputDF['LAT'].mean(), lon=inputDF['LON'].mean()),
             zoom=12
         ),
-        margin={'r':0, 't':40, 'l':0, 'b':0},
-        legend=_LEGEND
+        margin={'r':0, 't':40 if title else 0, 'l':0, 'b':0},
+        legend=_LEGEND,
+        showlegend=is_bool # with a colorbar the legend would only show 'Punti della rotta'
     )
-    po.plot(fig, filename='../../plot/' + filename, auto_open=True)
+    _save_map(fig, filename) # with the scale bar
 
 def route_arrows_plot(inputDF : p.DataFrame,
                       color_criteria : str = 'Avg_Speed',
                       scale_factor : float = 0.001,
-                      title : str = 'Grafico con frecce',
+                      title : str = None,
                       max_points : int = 5000
                       ) -> go.Figure:
     """
@@ -395,6 +419,7 @@ def route_arrows_plot(inputDF : p.DataFrame,
     :param Dataframe inputDF: the pandas dataframe containing all the points that are going to be plotted. Required columns: "MMSI, LAT, LON, COG, SOG, Avg_Speed"
     :param str color_criteria: the criteria used to assign a color to the different points. Must be a valid dataframe column name. Default: 'Avg_Speed'
     :param float scale_factor: the multiplying constant to adjust arrows length. Default: 0.001
+    :param str title: Default: None (no title, the plot is used in the thesis where the caption describes it)
     :param int max_points: maximum number of points to render. If the dataframe exceeds this, it is uniformly sampled. Default: 5000
     Returns:
     Plotly Graph Objects Figure
@@ -460,7 +485,7 @@ def route_arrows_plot(inputDF : p.DataFrame,
             center=dict(lat=inputDF["LAT"].mean(), lon=inputDF["LON"].mean()),
             zoom=10
         ),
-        margin={'r':40, 't':40, 'l':40, 'b':40},
+        margin={'r':0, 't':40 if title else 0, 'l':0, 'b':0},
         showlegend=True,
         legend=_LEGEND
     )
@@ -948,10 +973,137 @@ def plot_kde(xx : np.ndarray, yy : np.ndarray, zz : np.ndarray, fig_width : floa
     fig = plt.figure(figsize=(fig_width, fig_height))
     ax1 = fig.add_subplot(111)
     im1 = ax1.pcolormesh(xx, yy, zz, shading='auto', cmap='turbo')
-    ax1.set_title('KDE')
-    ax1.set_xlabel('Longitude')
-    ax1.set_ylabel('Latitude')
+    ax1.set_xlabel('Longitudine [deg]')
+    ax1.set_ylabel('Latitudine [deg]')
     ax1.set_aspect('equal')
-    plt.colorbar(im1, ax=ax1, label=r'Density [deg$^{-2}$]')
+    plt.colorbar(im1, ax=ax1, label=r'Densità [deg$^{-2}$]')
     plt.tight_layout()
     return fig
+
+# Labelling tool: one trip at a time, highlighted over all the trips of the route (in grey), in random order and
+# without score or trip_id, so that the manual labels do not depend on the model. Labels are kept in the browser
+# (localStorage) and exported as a CSV (trip_id,label with 1 = anomalous, 0 = normal).
+_LABELING_JS = """
+(function () {
+    var gd = document.getElementById('{plot_id}');
+    var DATA = __DATA__;
+    var KEY = 'trip_labels_' + DATA.route;
+    var labels = JSON.parse(localStorage.getItem(KEY) || '{}');
+    var pos = 0;
+
+    var panel = document.createElement('div');
+    panel.style.cssText = 'position:absolute; left:10px; top:10px; z-index:20; padding:8px 10px; width:260px;' +
+        'background:rgba(255,255,255,0.92); border:1px solid grey; font:14px sans-serif; color:black;';
+    panel.innerHTML =
+        '<div id="lt-info" style="margin-bottom:6px"></div>' +
+        '<div id="lt-label" style="margin-bottom:8px; font-weight:bold"></div>' +
+        '<button id="lt-normal">Normale (N)</button> <button id="lt-anomal">Anomalo (A)</button><br>' +
+        '<button id="lt-prev" style="margin-top:6px">&larr; Indietro</button> ' +
+        '<button id="lt-next" style="margin-top:6px">Avanti &rarr;</button><br>' +
+        '<button id="lt-csv" style="margin-top:6px">Scarica CSV</button>' +
+        '<div style="margin-top:6px; font-size:12px">Verde: inizio del trip. Nero: fine del trip.</div>';
+    document.body.appendChild(panel);
+
+    function count() { return Object.keys(labels).length; }
+    function show() {
+        var id = DATA.order[pos], t = DATA.trips[id];
+        Plotly.restyle(gd, {lat: [t.lat, [t.lat[0]], [t.lat[t.lat.length - 1]]],
+                            lon: [t.lon, [t.lon[0]], [t.lon[t.lon.length - 1]]]}, [1, 2, 3]);
+        document.getElementById('lt-info').innerHTML =
+            'Trip ' + (pos + 1) + ' di ' + DATA.order.length + '<br>' +
+            'Durata: ' + t.duration + ', punti: ' + t.lat.length + '<br>' +
+            'Etichettati: ' + count() + ' di ' + DATA.order.length;
+        var l = labels[id];
+        document.getElementById('lt-label').textContent =
+            l === undefined ? 'Non ancora etichettato' : (l === 1 ? 'Etichetta: anomalo' : 'Etichetta: normale');
+        var sub = gd._fullLayout.map && gd._fullLayout.map._subplot;
+        if (sub && sub.map) {
+            var lats = t.lat, lons = t.lon;
+            sub.map.fitBounds([[Math.min.apply(null, lons), Math.min.apply(null, lats)],
+                               [Math.max.apply(null, lons), Math.max.apply(null, lats)]],
+                              {padding: 80, duration: 0, maxZoom: 14});
+        }
+    }
+    function nextUnlabelled() {
+        for (var k = 1; k <= DATA.order.length; k++) {
+            var i = (pos + k) % DATA.order.length;
+            if (labels[DATA.order[i]] === undefined) { pos = i; return; }
+        }
+        pos = Math.min(pos + 1, DATA.order.length - 1);
+    }
+    function setLabel(value) {
+        labels[DATA.order[pos]] = value;
+        localStorage.setItem(KEY, JSON.stringify(labels));
+        if (count() === DATA.order.length) { show(); alert('Tutti i trip sono etichettati: scarica il CSV.'); return; }
+        nextUnlabelled(); show();
+    }
+    function download() {
+        var rows = ['trip_id,label'];
+        DATA.order.slice().sort(function (a, b) { return a - b; }).forEach(function (id) {
+            if (labels[id] !== undefined) rows.push(id + ',' + labels[id]);
+        });
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(new Blob([rows.join('\\n') + '\\n'], {type: 'text/csv'}));
+        a.download = 'trip_labels.csv';
+        a.click();
+    }
+    document.getElementById('lt-normal').onclick = function () { setLabel(0); };
+    document.getElementById('lt-anomal').onclick = function () { setLabel(1); };
+    document.getElementById('lt-prev').onclick = function () { pos = Math.max(pos - 1, 0); show(); };
+    document.getElementById('lt-next').onclick = function () { pos = Math.min(pos + 1, DATA.order.length - 1); show(); };
+    document.getElementById('lt-csv').onclick = download;
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'n' || e.key === 'N') setLabel(0);
+        else if (e.key === 'a' || e.key === 'A') setLabel(1);
+        else if (e.key === 'ArrowLeft') document.getElementById('lt-prev').click();
+        else if (e.key === 'ArrowRight') document.getElementById('lt-next').click();
+    });
+    function start() {
+        var sub = gd._fullLayout && gd._fullLayout.map && gd._fullLayout.map._subplot;
+        if (!sub || !sub.map) { setTimeout(start, 200); return; }
+        if (count() < DATA.order.length && labels[DATA.order[0]] !== undefined) { pos = -1; nextUnlabelled(); }
+        show();
+    }
+    start();
+})();
+"""
+
+def labeling_tool(inputDF : p.DataFrame, filename : str = 'trip_labeling.html', seed : int = 42) -> None:
+    '''
+    Writes plot/filename: an HTML page to label by hand the trips of a route as normal or anomalous, used as ground
+    truth for the evaluation of the anomaly score (confusion matrix). The trips are shown one at a time, in random
+    order and without trip_id or score, highlighted over all the other trips of the route. The labels are saved in
+    the browser and exported with the "Scarica CSV" button (trip_labels.csv: trip_id,label with 1 = anomalous).
+    :param Dataframe inputDF: points of the route. Required columns: "trip_id, BaseDateTime, LAT, LON, Route"
+    :param str filename: name of the output file in plot/. Default: 'trip_labeling.html'
+    :param int seed: seed of the random order of the trips. Default: 42
+    '''
+    import json
+    df = inputDF.sort_values(['trip_id', 'BaseDateTime'])
+    trips, bg_lat, bg_lon = {}, [], []
+    for trip_id, t in df.groupby('trip_id', sort=True):
+        lat, lon = t['LAT'].round(5).tolist(), t['LON'].round(5).tolist()
+        seconds = int((t['BaseDateTime'].iloc[-1] - t['BaseDateTime'].iloc[0]).total_seconds())
+        trips[int(trip_id)] = dict(lat=lat, lon=lon, duration=f'{seconds // 3600} h {seconds % 3600 // 60} min')
+        bg_lat += lat + [None]; bg_lon += lon + [None]
+    order = [int(i) for i in np.random.default_rng(seed).permutation(list(trips))]
+    route = str(df['Route'].iloc[0])
+
+    fig = go.Figure()
+    fig.add_trace(go.Scattermap(lat=bg_lat, lon=bg_lon, mode='lines', line=dict(width=1, color='grey'),
+                                opacity=0.4, hoverinfo='skip', name='Tutti i trip'))
+    fig.add_trace(go.Scattermap(lat=[], lon=[], mode='lines+markers', line=dict(width=2, color='red'),
+                                marker=dict(size=5, color='red'), hoverinfo='skip', name='Trip da etichettare'))
+    fig.add_trace(go.Scattermap(lat=[], lon=[], mode='markers', marker=dict(size=14, color='green'),
+                                hoverinfo='skip', name='Inizio'))
+    fig.add_trace(go.Scattermap(lat=[], lon=[], mode='markers', marker=dict(size=14, color='black'),
+                                hoverinfo='skip', name='Fine'))
+    fig.update_layout(
+        map=dict(style=_BASEMAP_STYLE, center=dict(lat=float(df['LAT'].mean()), lon=float(df['LON'].mean())), zoom=10),
+        margin={'r':0, 't':0, 'l':0, 'b':0},
+        showlegend=False,
+        height=900
+    )
+    data = json.dumps(dict(route=route, order=order, trips={str(k): v for k, v in trips.items()}))
+    pio.write_html(fig, file='../../plot/' + filename, include_plotlyjs=True,
+                   post_script=[_SCALE_BAR_JS, _LABELING_JS.replace('__DATA__', data)], auto_open=True)
