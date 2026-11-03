@@ -164,6 +164,7 @@ dataset/
 src/temp-plot.html
 src/test.html
 out/TREAD_out.pkl
+out/trip_labels.csv
 src/vessel_traffic_density.html
 #thesis/sections/frontmatter/titlepage.tex
 #thesis/sections/frontmatter/abstract.tex
