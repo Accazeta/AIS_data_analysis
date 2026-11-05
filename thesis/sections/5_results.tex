@@ -480,12 +480,106 @@ anomali corrispondono quindi a traiettorie visibilmente diverse da quella tipica
     punteggio.}\label{fig:res_score_trips_map}
 \end{figure}
  
-\subsection{Metriche di valutazione}
- 
-% NOTA: le metriche quantitative non sono ancora state definite. Una volta
-% stabilite, questa sottosezione dovrà riportare i valori ottenuti
-% (es. AUC-ROC, precision/recall se disponibile un ground truth,
-% oppure metriche interne come la separazione tra distribuzioni dei punteggi).
+\subsection{Metriche di valutazione}\label{ssec:res_metrics}
+
+Il metodo non richiede etichette: i punteggi e il ranking dei trip sono ottenuti in modo
+completamente automatico. Per valutarne quantitativamente le prestazioni, i 184 trip della
+rotta selezionata sono stati etichettati a mano, esclusivamente come riferimento per il calcolo
+delle metriche. L'etichettatura è stata svolta da un solo annotatore, a vista, osservando
+ciascun trip sulla mappa insieme agli altri trip della rotta; i trip classificati come normali
+dal metodo ma etichettati come anomali sono stati poi riesaminati uno a uno, per correggere
+eventuali errori di etichettatura.
+
+Ogni trip è stato assegnato a una di tre classi. Un trip è una \emph{route deviation} se almeno
+un tratto del percorso tra la partenza e l'arrivo esce chiaramente dal corridoio seguito dalla
+maggior parte dei trip della rotta. Nella classe delle altre anomalie ricadono i trip che
+terminano il viaggio fuori dal porto di arrivo (15 trip), quelli che compiono manovre insolite
+nella zona di avvicinamento al porto (4 trip) e un trip che compie un piccolo giro subito dopo la
+partenza. Tutti gli altri trip sono normali. Si ottengono così 143 trip normali, 21 route
+deviation e 20 altre anomalie.
+
+Poiché il metodo è pensato per rilevare le route deviation, la valutazione considera due casi:
+\begin{itemize}
+    \item caso (a), \emph{tutte le anomalie}: tutti i 184 trip, con le route deviation e le
+    altre anomalie riunite in un'unica classe di trip anomali (41 trip);
+    \item caso (b), \emph{solo route deviation}: i 164 trip normali o etichettati come route
+    deviation (21 trip anomali), esclusi i 20 trip con altre anomalie.
+\end{itemize}
+
+Per trasformare il punteggio in una classificazione occorre una soglia, al di sotto della quale
+un trip è considerato anomalo. Per non usare le etichette nella scelta della soglia, questa è
+calcolata con la regola di Tukey sui punteggi di tutti i 184 trip:
+\begin{equation}
+    s = Q_1 - 1{,}5 \cdot (Q_3 - Q_1),
+\end{equation}
+dove $Q_1 = 1.760{,}74$ e $Q_3 = 2.244{,}25$ sono il primo e il terzo quartile dei punteggi.
+La soglia vale $s = 1.035{,}48$; sono classificati come anomali i nove trip con punteggio
+inferiore, cioè i primi nove della colonna dei punteggi più bassi della
+Tabella~\ref{tab:res_score_ranking}.
+
+La Figura~\ref{fig:res_eval_cm} riporta le matrici di confusione dei due casi e la
+Tabella~\ref{tab:res_metrics} le metriche che ne derivano. I nove trip classificati come anomali
+sono tutti route deviation, quindi in entrambi i casi non ci sono falsi positivi e la precision
+è pari a 1. La recall è invece bassa: il metodo rileva 9 delle 41 anomalie del caso (a) e 9
+delle 21 route deviation del caso (b). Escludere le altre anomalie fa salire la recall da 0,220
+a 0,429 e l'F1 da 0,360 a 0,600: i trip non rilevati sono soprattutto anomalie di tipo diverso
+dalle route deviation. L'accuracy è elevata in entrambi i casi (0,826 e 0,927), ma è poco
+indicativa, perché i trip normali sono la grande maggioranza.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\textwidth]{Results/evaluation_cm.png}
+    \caption{Matrici di confusione con la soglia di Tukey, considerando tutte le anomalie (a) e
+    le sole route deviation (b).}\label{fig:res_eval_cm}
+\end{figure}
+
+\begin{table}[htbp]
+\centering
+\caption{Metriche di valutazione con la soglia di Tukey ($s = 1.035{,}48$) nei due casi
+considerati.}\label{tab:res_metrics}
+\begin{tabular}{lcc}
+\toprule
+\textbf{Metrica} & \textbf{(a) Tutte le anomalie} & \textbf{(b) Solo route deviation} \\
+\midrule
+Trip valutati   & 184   & 164   \\
+Trip anomali    & 41    & 21    \\
+Accuracy        & 0,826 & 0,927 \\
+Precision       & 1,000 & 1,000 \\
+Recall          & 0,220 & 0,429 \\
+F1              & 0,360 & 0,600 \\
+AUC             & 0,751 & 0,844 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+La soglia di Tukey è molto severa. Per valutare il punteggio indipendentemente dalla soglia, la
+Figura~\ref{fig:res_eval_roc} riporta le curve ROC dei due casi, ottenute facendo variare la
+soglia su tutti i valori del punteggio. L'area sotto la curva (AUC) vale 0,751 nel caso (a) e
+0,844 nel caso (b). Nel caso (b) la curva sale rapidamente: con un tasso di falsi positivi di
+circa il 6\% si rileva circa il 71\% delle route deviation, per cui una soglia meno severa
+permetterebbe di recuperare buona parte dei trip non rilevati al prezzo di pochi falsi
+positivi. Nel caso (a), invece, la curva resta piatta per un ampio tratto e nella parte alta
+scende sotto la diagonale del classificatore casuale: alcune anomalie hanno punteggi più alti
+di quasi tutti i trip normali. Quattro di esse (i trip 23474, 8857, 8374 e 25609) compaiono tra i dieci trip con punteggio più alto
+della Tabella~\ref{tab:res_score_ranking}.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Results/evaluation_roc.png}
+    \caption{Curve ROC del punteggio di anomalia considerando tutte le anomalie e le sole route
+    deviation.}\label{fig:res_eval_roc}
+\end{figure}
+
+Una possibile spiegazione di questo comportamento è legata al termine di osservazione del
+punteggio, che domina il ranking. Nelle zone davanti ai porti le navi rallentano e i punti si
+addensano, per cui la somma delle log-densità $L_i$ assume i valori più alti
+(Figura~\ref{fig:res_log_kde_map}). Un trip che compie manovre lente vicino al porto accumula
+quindi molti punti con $L_i$ elevato e ottiene un punteggio alto. Lo stesso accade per tre
+route deviation non rilevate (i trip 25652, 23889 e 10583), la cui deviazione avviene vicino al
+porto. Un trip che termina il viaggio fuori dal porto ma segue il corridoio per la maggior parte
+del percorso, invece, ottiene un punteggio nella norma, perché il punteggio è una media sui
+punti del trip. Il metodo risulta quindi adatto a rilevare le deviazioni dal corridoio lungo il
+tragitto, mentre è poco sensibile alle anomalie che riguardano la zona dei porti.
  
 % ─────────────────────────────────────────────
 \section{Interpretazione dei risultati}\label{sec:res_interpretation}
