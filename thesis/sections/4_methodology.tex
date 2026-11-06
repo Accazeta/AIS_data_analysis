@@ -156,7 +156,7 @@ Tutti i \texttt{DataFrame} così creati vengono concatenati in un unico \texttt{
 Le operazioni di importazione e filtraggio avvengono grazie alla libreria \textbf{Polars}, che è stata scelta per il fatto che (a differenza
 di Pandas) supporta il multithreading nativamente. 
 
-In una fase successiva, i record esattamente duplicati (identici in ogni attributo) vengono rimossi, lasciandone solo uno per ogni gruppo duplicato.
+In una fase successiva, i record esattamente duplicati (identici in ogni attributo) vengono rimossi, lasciandone solo uno per ogni gruppo di duplicati.
 
 Viene poi rimosso un ulteriore sottoinsieme di record: quelli generati da navi, la cui somma di record presenti nel database è inferiore
 al 10\% della media calcolata sul totale delle navi presenti. 
@@ -340,7 +340,7 @@ punti stazionari processati è pari a circa 3.770.000 righe.
 
 \subsubsection{DBSCAN}
  
-L'algoritmo DBSCAN viene eseguito con i parametri $\varepsilon = 0.075$ e $N_{\min} = 10$, scelti empiricamente 
+L'algoritmo DBSCAN viene eseguito con i parametri $\varepsilon = 0{,}075$ e $N_{\min} = 10$, scelti empiricamente 
 in modo da produrre cluster geograficamente coerenti con i porti e i punti di passaggio dell'arcipelago delle Hawaii.
 Il parametro $\varepsilon$ è il raggio dell'intorno considerato attorno a ogni punto, uguale in tutta l'area di studio;
 poiché le distanze sono calcolate direttamente su latitudine e longitudine, è espresso in gradi e corrisponde a circa 8 km.
@@ -361,8 +361,8 @@ Poiché la libreria \texttt{hdbscan}\footnote{Libreria esterna \texttt{hdbscan} 
 distinta dall'implementazione inclusa in scikit-learn.} non consente di associare i pesi ad ogni punto ma li considera tutti equiponderati, 
 la tabella aggregata viene espansa: ogni coordinata viene replicata un numero di volte pari al suo peso calcolato in precedenza applicando il logaritmo. 
 La tabella espansa conta circa 97.000 righe, ossia poco meno del doppio della tabella utilizzata come input per l'algoritmo DBSCAN\@. 
-Infine, H-DBSCAN viene eseguito con i parametri $\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$ 
-e $\text{cluster\_selection\_epsilon} = 0.01$, scelti empiricamente con lo stesso criterio usato per DBSCAN.
+Infine, H-DBSCAN viene eseguito con parametri scelti empiricamente con lo stesso criterio usato per DBSCAN:
+$\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10.000$ e $\text{cluster\_selection\_epsilon} = 0{,}01$.
 Il parametro $\text{min\_cluster\_size}$ è il numero minimo di punti che un cluster deve contenere: le aggregazioni
 più piccole vengono classificate come rumore. $\text{max\_cluster\_size}$ è il numero massimo di punti di un cluster
 e impedisce che nelle aree più dense si formi un unico cluster molto esteso. $\text{cluster\_selection\_epsilon}$ è
@@ -463,7 +463,7 @@ un valore di densità $p_i$ che combina informazione spaziale e cinematica.
 
 Per passare dalla densità dei singoli punti a un termine di osservazione, si considera attorno a ogni
 punto $i$ della rotta un intorno di raggio $d = 500$~m, che corrisponde alla regione di stato
-dell'equazione~7 di~\cite{pallotta}: l'insieme $N_i$ dei punti della rotta la cui distanza da $i$,
+dell'equazione~7 di~\cite{pallotta}. Questo è l'insieme $N_i$ dei punti della rotta la cui distanza da $i$,
 calcolata con la Great-Circle Distance, è inferiore a $d$. In figura~\ref{fig:regions_test} è
 riportato, in rosso, l'intorno di un punto della rotta selezionata scelto a caso. A ogni punto viene associata la somma dei
 logaritmi delle densità dei punti del suo intorno,
@@ -618,5 +618,5 @@ motivata dalla necessità di gestire cluster a densità variabile;
 l'approccio batch in luogo di quello incrementale, imposto dai vincoli hardware; 
 l'introduzione della normalizzazione per lunghezza del trip nel calcolo del punteggio di anomalia, non presente nell'originale.
 
-Il Capitolo~\ref{chap:results} presenterà i risultati ottenuti: i waypoint identificati, 
+Il Capitolo~\ref{chap:results} presenta i risultati ottenuti: i waypoint identificati, 
 le rotte estratte, i parametri del modello Weibull stimati e il ranking di anomalia dei trip sulla rotta selezionata.

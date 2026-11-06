@@ -3,10 +3,11 @@
  
 Questo capitolo presenta i risultati ottenuti applicando la pipeline descritta nel
 Capitolo~\ref{chap:methodology} al dataset AIS delle Hawaii.
-I risultati sono organizzati in quattro sezioni: la prima descrive il dataset nelle
+I risultati sono organizzati in cinque sezioni. La prima descrive il dataset nelle
 sue dimensioni finali dopo il pre-processing; la seconda mostra i risultati qualitativi
 prodotti dalla fase di Knowledge Discovery; la terza riporta i risultati quantitativi
-della fase di anomaly detection; la quarta ne discute l'interpretazione e le implicazioni.
+della fase di anomaly detection; la quarta ne discute l'interpretazione e le implicazioni;
+la quinta riassume i risultati principali.
  
 % ─────────────────────────────────────────────
 \section{Dataset}\label{sec:res_dataset}
@@ -26,9 +27,8 @@ L'applicazione della soglia dinamica sull'attività delle imbarcazioni
 (Sezione~\ref{sec:meth_preprocessing}), pari al 10\% del numero medio di record per
 nave e quindi a 907 record, ha eliminato 199 imbarcazioni, corrispondenti allo 0,84\%
 dei record totali. Il dataset risultante conta 5.415.168 record relativi a 403
-imbarcazioni, sulle quali si osservano le seguenti statistiche sul numero di record per
-nave: media di 13.437 record, deviazione standard di 16.309, con un massimo di 82.554 e
-un minimo di 921 record per singola imbarcazione.
+imbarcazioni. Il numero di record per nave ha una media di 13.437 e una deviazione standard
+di 16.309, con un massimo di 82.554 e un minimo di 921.
  
 \subsection{Classificazione degli stati e punti stazionari}
  
@@ -51,8 +51,8 @@ vi ricadono.
 Il clustering H-DBSCAN applicato ai punti stazionari aggregati ha identificato
 144 waypoint distinti (da \texttt{WP\_0} a \texttt{WP\_143}).
 I punti che ricadono in più di un waypoint, a causa della sovrapposizione degli inviluppi
-convessi, sono 7.298, pari allo 0,135\% del dataset: l'effetto della regola di assegnazione
-descritta nella Sezione~\ref{ssec:meth_routes} è quindi trascurabile. A partire da questi waypoint,
+convessi, sono 7.298, pari allo 0,135\% del dataset, per cui l'effetto della regola di assegnazione
+descritta nella Sezione~\ref{ssec:meth_routes} è trascurabile. A partire da questi waypoint,
 sono state estratte in tutto 766 rotte distinte e 36.033 trip.
  
 Per la fase di anomaly detection è stata selezionata la rotta \texttt{WP\_135 - WP\_118},
@@ -75,15 +75,15 @@ che varia da una figura all'altra. Ogni waypoint è rappresentato dal suo invilu
 convesso (\emph{convex hull}), con il contorno nero; nelle mappe delle rotte accanto a ogni
 waypoint ne è riportato il nome. Il significato del colore è
 indicato dalla barra a destra di ogni mappa. Nelle mappe dei waypoint il colore rappresenta
-il peso delle coordinate aggregate; in quelle delle rotte rappresenta il numero di trip, su
+il peso delle coordinate aggregate; in quelle delle rotte rappresenta il numero di trip in
 scala logaritmica.
  
 \subsection{Waypoint identificati}
  
 Le Figure~\ref{fig:res_dbscan} e~\ref{fig:res_hdbscan} mostrano i cluster di punti
-stazionari ottenuti rispettivamente con DBSCAN ($\varepsilon = 0.075$, $N_{\min} = 10$)
-e con H-DBSCAN ($\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10\,000$,
-$\text{cluster\_selection\_epsilon} = 0.01$), con i parametri descritti nella Sezione~\ref{ssec:meth_clustering}. In entrambe le figure
+stazionari ottenuti rispettivamente con DBSCAN ($\varepsilon = 0{,}075$ e $N_{\min} = 10$)
+e con H-DBSCAN ($\text{min\_cluster\_size} = 30$, $\text{max\_cluster\_size} = 10.000$,
+$\text{cluster\_selection\_epsilon} = 0{,}01$), con i parametri descritti nella Sezione~\ref{ssec:meth_clustering}. In entrambe le figure
 i punti colorati sono quelli assegnati a un cluster e i punti bianchi quelli classificati
 come rumore. Il colore indica il peso di ciascuna coordinata aggregata, pari al logaritmo in
 base 2 del numero di messaggi AIS che vi ricadono, arrotondato all'intero più vicino
@@ -92,21 +92,21 @@ base 2 del numero di messaggi AIS che vi ricadono, arrotondato all'intero più v
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{Results/DBSCAN.png}
-    \caption[Waypoint identificati con DBSCAN.]{Waypoint identificati con DBSCAN ($\varepsilon = 0.075$, $N_{\min} = 10$).}\label{fig:res_dbscan}
+    \caption[Waypoint identificati con DBSCAN.]{Waypoint identificati con DBSCAN ($\varepsilon = 0{,}075$ e $N_{\min} = 10$).}\label{fig:res_dbscan}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{Results/H-DBSCAN.png}
     \caption[Waypoint identificati con H-DBSCAN.]{Waypoint identificati con H-DBSCAN ($\text{min\_cluster\_size} = 30$,
-    $\text{max\_cluster\_size} = 10\,000$, $\text{cluster\_selection\_epsilon} = 0.01$).}\label{fig:res_hdbscan}
+    $\text{max\_cluster\_size} = 10.000$, $\text{cluster\_selection\_epsilon} = 0{,}01$).}\label{fig:res_hdbscan}
 \end{figure}
 
 DBSCAN individua 55 cluster e classifica come rumore
 1.001 delle 51.801 coordinate aggregate (1,93\%); H-DBSCAN, eseguito sulla tabella
-espansa secondo i pesi (Sezione~\ref{ssec:meth_clustering}), individua 144 cluster e ne scarta 2.800 su 96.913
+espansa secondo i pesi (Sezione~\ref{ssec:meth_clustering}), individua 144 cluster e scarta 2.800 punti su 96.913
 (2,89\%). Il confronto mette in evidenza il limite principale di DBSCAN con un raggio $\varepsilon$
-fisso. Nell'area del porto di Honolulu e le zone di ancoraggio
+fisso. Nell'area del porto di Honolulu e delle zone di ancoraggio
 vicine, la densità di punti stazionari è molto alta, e DBSCAN raggruppa tutta la zona in
 un unico grande cluster che copre buona parte dell'isola di Oahu. Lo stesso succede lungo la costa
 occidentale dell'isola di Maui e lungo la costa di Kona sull'isola di Hawaii, dove punti di sosta
@@ -127,8 +127,8 @@ fasi successive della pipeline.
 \subsection{Rotte estratte}
  
 Per visualizzare le rotte, i trip sono stati divisi in tre gruppi in base ai waypoint di
-origine e di destinazione: rotte tra due waypoint distinti (\texttt{WP\_A --- WP\_B}),
-rotte che tornano al waypoint di partenza (\texttt{WP\_A --- WP\_A}, di seguito
+origine e di destinazione, cioè rotte tra due waypoint distinti (\texttt{WP\_A - WP\_B}),
+rotte che tornano al waypoint di partenza (\texttt{WP\_A - WP\_A}, di seguito
 \emph{self-loop}) e rotte con almeno un estremo non classificato (\texttt{<NA>}).
 Dei 36.033 trip estratti, 4.089 (11,3\%) appartengono al primo gruppo, 30.981 (86,0\%) al
 secondo e 963 (2,7\%) al terzo.
@@ -163,7 +163,7 @@ ingrandimenti che seguono, indica il numero di trip rilevati per quella rotta.
     numeri accanto alle frecce.}\label{fig:res_route_graph_all}
 \end{figure}
 
-Le rotte più frequentate sono \texttt{WP\_2 --- WP\_111} e \texttt{WP\_111 --- WP\_2}
+Le rotte più frequentate sono \texttt{WP\_2 - WP\_111} e \texttt{WP\_111 - WP\_2}
 (288 e 287 trip), tra Lahaina, sull'isola di Maui, e la costa meridionale dell'isola di Lanai
 (Figura~\ref{fig:res_route_zoom_maui}). Il numero quasi identico di trip nei due versi è
 compatibile con un servizio di linea che fa la spola tra le due isole. Inoltre, il medoide
@@ -176,8 +176,8 @@ riportata sulla mappa di base.
     \caption{Ingrandimento del grafo delle rotte sul canale tra le isole di Maui e Lanai.}\label{fig:res_route_zoom_maui}
 \end{figure}
 
-Seguono \texttt{WP\_135 --- WP\_118} e \texttt{WP\_118 --- WP\_135} (184 e 161 trip), tra
-il porto di Honolulu e quello di Kalaeloa, sulla costa sud-occidentale
+Seguono \texttt{WP\_135 - WP\_118} e \texttt{WP\_118 - WP\_135} (184 e 161 trip), tra
+il porto di Honolulu e quello di Kalaeloa, sulla costa sud
 dell'isola di Oahu (Figura~\ref{fig:res_route_zoom_oahu}). Il waypoint \texttt{WP\_135},
 che corrisponde al porto di Honolulu, è il nodo con più collegamenti
 (Figura~\ref{fig:res_route_zoom_honolulu}).
@@ -196,22 +196,22 @@ che corrisponde al porto di Honolulu, è il nodo con più collegamenti
 
 I cluster in mare aperto si trovano in gran
 parte lungo il bordo della bounding box e rappresentano quindi i punti in cui le navi
-entrano o escono dall'area di studio: le rotte che li raggiungono vanno lette come
+entrano o escono dall'area di studio. Per questo le rotte che li raggiungono vanno lette come
 collegamenti con l'esterno dell'arcipelago più che come tratte tra due località precise.
 
 \paragraph{Rotte di ritorno al waypoint di partenza.}
 I self-loop sono la grande maggioranza dei trip, ma nella maggior parte dei casi non
 corrispondono a un'uscita in mare. Un punto viene attribuito a un waypoint come sosta solo
-se la nave è quasi ferma (Sezione~\ref{ssec:meth_routes}): quando una nave si sposta
+se la nave è quasi ferma (Sezione~\ref{ssec:meth_routes}). Quando una nave si sposta
 all'interno del waypoint a una velocità superiore alla soglia, ad esempio per cambiare
 ormeggio o posizione di ancoraggio, i punti di questo spostamento formano un trip
-\texttt{WP\_A --- WP\_A} anche se la nave non è mai uscita dal waypoint. Solo 1.387 dei
+\texttt{WP\_A - WP\_A} anche se la nave non è mai uscita dal waypoint. Solo 1.387 dei
 30.981 self-loop (4,5\%) contengono almeno un punto esterno al waypoint di partenza. Gli
 altri, essendo spostamenti interni a un porto o a una zona di ancoraggio, sono esclusi
 dalle mappe di questa sezione, ma restano inclusi nei conteggi complessivi riportati sopra.
 La differenza tra i due gruppi è visibile nelle Figure~\ref{fig:res_self_loops_inside}
 e~\ref{fig:res_self_loops_leaving}, che mostrano tutti i self-loop del porto di Honolulu
-(\texttt{WP\_135}): quelli interni restano all'interno del poligono del waypoint, tra le
+(\texttt{WP\_135}). Quelli interni restano all'interno del poligono del waypoint, tra le
 banchine del porto e il tratto di mare compreso nel waypoint, mentre quelli che escono si
 allontanano in mare aperto prima di farvi ritorno.
 
@@ -233,7 +233,7 @@ I 1.387 trip che escono almeno una volta dal waypoint si distribuiscono su 116 r
 distinte. Di queste 116 rotte, 17 hanno almeno 10 trip e
 raccolgono complessivamente 1.090 dei 1.387 trip (78,6\%). I trip di una stessa rotta
 self-loop possono avere forma e lunghezza molto diverse, a seconda di dove la nave si è
-diretta prima di tornare: per questo non viene disegnata una traiettoria rappresentativa,
+diretta prima di tornare. Per questo non viene disegnata una traiettoria rappresentativa,
 ma solo i waypoint coinvolti, colorati in base al numero di trip che vi ritornano, con un
 ingrandimento per ciascuna delle tre aree in cui si concentrano
 (Figure~\ref{fig:res_self_loops_oahu}, \ref{fig:res_self_loops_maui}
@@ -243,21 +243,21 @@ riporta il nome e il numero $n$ di questi trip.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{Results/self_loops1.png}
-    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: isola di Oahu.}\label{fig:res_self_loops_oahu}
+    \caption{Waypoint dell'isola di Oahu con almeno 10 trip che escono dal waypoint e vi ritornano.}\label{fig:res_self_loops_oahu}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{Results/self_loops2.png}
-    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: isole di Maui,
-    Lanai e Molokai.}\label{fig:res_self_loops_maui}
+    \caption{Waypoint delle isole di Maui, Lanai e Molokai con almeno 10 trip che escono dal
+    waypoint e vi ritornano.}\label{fig:res_self_loops_maui}
 \end{figure}
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{Results/self_loops3.png}
-    \caption{Waypoint con almeno 10 trip che escono dal waypoint e vi ritornano: costa di Kona,
-    sull'isola di Hawaii.}\label{fig:res_self_loops_kona}
+    \caption{Waypoint della costa di Kona, sull'isola di Hawaii, con almeno 10 trip che escono
+    dal waypoint e vi ritornano.}\label{fig:res_self_loops_kona}
 \end{figure}
 
 I due waypoint con più self-loop sono il porto di Honolulu (\texttt{WP\_135}, 327 trip,
@@ -285,9 +285,9 @@ singole traiettorie, con un marcatore bianco sul primo punto e uno nero sull'ult
     destinazione non classificata (WP $\rightarrow$ \texttt{<NA>}, in arancione).}\label{fig:res_na_routes}
 \end{figure}
 
-Più di tre quarti di questi trip (710 su 928) partono o arrivano al porto di Honolulu
-(\texttt{WP\_135 --- <NA>}: 367 trip, \texttt{<NA> --- WP\_135}: 343 trip). Gli estremi
-non classificati si dividono in due gruppi: una parte si trova sul bordo della bounding box e
+Più di tre quarti di questi trip (710 su 928) partono dal porto di Honolulu o vi arrivano
+(367 trip della rotta \texttt{WP\_135 - <NA>} e 343 della rotta \texttt{<NA> - WP\_135}). Gli estremi
+non classificati si dividono in due gruppi. Una parte si trova sul bordo della bounding box e
 corrisponde a navi che entrano o escono dall'area di studio; gli altri sono sparsi in mare
 aperto e corrispondono a soste che non sono state assegnate ad alcun cluster, in quanto
 classificate come rumore da H-DBSCAN perché troppo isolate per formare un waypoint.
@@ -315,14 +315,14 @@ Alla scala della Figura~\ref{fig:res_selected_trips} le frecce sono troppo corte
 dimensione dei punti e non risultano visibili. Per questo motivo la
 Figura~\ref{fig:res_selected_trips_zoom} riporta un ingrandimento del tratto iniziale della
 rotta, dal canale di accesso al porto di Honolulu fino al mare aperto, in cui si può apprezzare
-la direzione del moto: le frecce sono rivolte verso sud-ovest e poi verso ovest, in accordo con
+la direzione del moto. Le frecce sono rivolte verso sud-ovest e poi verso ovest, in accordo con
 il verso di percorrenza della rotta.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.85\textwidth]{Results/selected_trips_zoom.png}
     \caption[Ingrandimento della rotta selezionata all'uscita dal porto di Honolulu.]{Ingrandimento della Figura~\ref{fig:res_selected_trips} all'uscita dal porto di
-    Honolulu: le frecce indicano la direzione del moto, con lunghezza proporzionale alla velocità
+    Honolulu. Le frecce indicano la direzione del moto, con lunghezza proporzionale alla velocità
     media.}\label{fig:res_selected_trips_zoom}
 \end{figure}
  
@@ -333,7 +333,7 @@ il verso di percorrenza della rotta.
 
 Le due KDE descritte nella Sezione~\ref{ssec:meth_kde} sono state stimate sui 20.241 punti
 della rotta selezionata e valutate su una griglia regolare che copre l'area occupata dai punti.
-La Figura~\ref{fig:res_kde_spatial} mostra la KDE spaziale: la densità è massima all'uscita del
+La Figura~\ref{fig:res_kde_spatial} mostra la KDE spaziale. La densità è massima all'uscita del
 porto di Kalaeloa, dove arriva a circa 110 deg$^{-2}$, e resta elevata lungo il corridoio
 parallelo alla costa e all'imbocco del porto di Honolulu; al di fuori del corridoio è prossima
 a zero.
@@ -359,8 +359,8 @@ diminuisce.
 Il prodotto delle due KDE fornisce la densità $p_i$ di ogni punto, da cui si ottiene la somma
 $L_i$ dei logaritmi delle densità nell'intorno di 500 m (Sezione~\ref{ssec:meth_kde}),
 riportata in Figura~\ref{fig:res_log_kde_map}. I valori più alti, fino a circa 9.000, si
-trovano nel canale di accesso al porto di Kalaeloa e, in misura minore, in quello di Honolulu:
-qui le navi rallentano e i punti si addensano, per cui ogni intorno contiene molti punti. Lungo
+trovano nel canale di accesso al porto di Kalaeloa e, in misura minore, in quello di Honolulu,
+dove le navi rallentano e i punti si addensano, per cui ogni intorno contiene molti punti. Lungo
 il corridoio $L_i$ vale tra circa 1.000 e 2.000, mentre i punti dei trip che si allontanano
 verso il largo hanno valori prossimi a zero. Sono questi punti ad abbassare il termine di
 osservazione dei trip corrispondenti, che occupano infatti le ultime posizioni del ranking
@@ -377,7 +377,7 @@ osservazione dei trip corrispondenti, che occupano infatti le ultime posizioni d
 
 I parametri della distribuzione di Weibull, stimati sull'intero insieme di 184 trip
 della rotta selezionata (Sezione~\ref{sec:meth_anomaly}), risultano pari a
-$m = 1{,}3105$ (coefficiente della relazione $\alpha = m \cdot \Delta t$ 
+$m = 1{,}3105$~m/s (coefficiente della relazione $\alpha = m \cdot \Delta t$ 
 tra parametro di scala e intervallo temporale) e $\beta = 0{,}9358$ (parametro di forma medio).
 I lag temporali utilizzati sono 11, equidistanti, da 252 s (4,2 minuti) a 1.679 s (28 minuti).
 Per ciascun lag la Figura~\ref{fig:res_weibull_fit} mostra la distribuzione delle distanze
@@ -396,7 +396,7 @@ La Figura~\ref{fig:res_weibull_regression} mostra a sinistra i parametri di scal
 diversi lag e la retta $\alpha = m \cdot \Delta t$ ottenuta per regressione, a destra le
 probabilità di transizione (equazione~14 di~\cite{pallotta}) che ne derivano per tre lag.
 La relazione lineare ipotizzata da~\cite{pallotta} descrive i dati solo in modo
-approssimativo: i parametri di scala crescono più che linearmente con il lag, per cui la retta
+approssimativo. I parametri di scala crescono più che linearmente con il lag, per cui la retta
 sovrastima $\alpha$ per i lag brevi e lo sottostima per quelli lunghi. Anche il parametro di
 forma, che nel modello originale è considerato pressoché costante, aumenta al crescere del
 lag. Relazioni alternative tra parametro di scala e intervallo temporale potrebbero essere
@@ -413,9 +413,9 @@ esplorate in sviluppi futuri del lavoro.
 \subsection{Anomaly scoring e ranking dei trip}\label{ssec:res_scoring}
  
 Applicando il modello ai 184 trip della rotta selezionata si ottiene un punteggio per ciascun
-trip. I punteggi vanno da 211,39 a 3.134,05, con media pari a 1.994,39 e deviazione standard
-pari a 458,45. La Tabella~\ref{tab:res_score_ranking} riporta i dieci trip con punteggio più alto,
-cioè con il comportamento più regolare, e i dieci con punteggio più basso, che sono i candidati
+trip. I punteggi vanno da 211,39 a 3.134,05; la media è pari a 1.994,39 e la deviazione standard
+a 458,45. La Tabella~\ref{tab:res_score_ranking} riporta i dieci trip con punteggio più alto,
+cioè quelli che il modello giudica più regolari, e i dieci con punteggio più basso, che sono i candidati
 più probabili come anomalie. Il trip più anomalo è il 3372, con un punteggio nettamente inferiore a
 quello del secondo trip della lista (211,39 contro 385,96 del trip 3413).
 
@@ -443,16 +443,16 @@ quello del secondo trip della lista (211,39 contro 385,96 del trip 3413).
 \end{tabular}
 \end{table}
 
-La Figura~\ref{fig:res_score_distribution} mostra la distribuzione dei punteggi sui 184 trip:
-a sinistra la sola componente legata alla sequenza degli stati, cioè la log-probabilità delle
-transizioni normalizzata per il numero di transizioni del trip, a destra il punteggio di
+La Figura~\ref{fig:res_score_distribution} mostra la distribuzione dei punteggi sui 184 trip,
+con a sinistra la sola componente legata alla sequenza degli stati, cioè la log-probabilità delle
+transizioni normalizzata per il numero di transizioni del trip, e a destra il punteggio di
 anomalia complessivo. La componente della sequenza degli stati varia tra $-0{,}78$ e
-$-0{,}12$, con un solo trip nettamente separato dagli altri in corrispondenza del valore
-minimo. Il punteggio complessivo si concentra tra circa 1.500 e 2.500, con il massimo della
+$-0{,}12$; un solo trip, in corrispondenza del valore minimo, è nettamente separato dagli
+altri. Il punteggio complessivo si concentra tra circa 1.500 e 2.500, con il massimo della
 distribuzione tra 2.000 e 2.250, e presenta una coda più lunga verso i valori bassi, in cui
 ricadono i trip candidati come anomalie. L'intervallo di variazione della componente della
 sequenza degli stati è più piccolo di oltre tre ordini di grandezza rispetto a quello del
-punteggio complessivo: il ranking dei trip è quindi determinato quasi interamente dalla
+punteggio complessivo, per cui il ranking dei trip è determinato quasi interamente dalla
 log-probabilità di osservazione derivata dalla KDE.
 
 \begin{figure}[htbp]
@@ -462,11 +462,12 @@ log-probabilità di osservazione derivata dalla KDE.
     normalizzata della sequenza di stati (a sinistra) e del punteggio di anomalia (a
     destra).}\label{fig:res_score_distribution}
 \end{figure}
+
 La Figura~\ref{fig:res_score_trips_map} mette a confronto sulla mappa i cinque trip con
 punteggio più alto e i cinque con punteggio più basso, colorati in base al punteggio. I primi,
 in rosso, seguono traiettorie quasi sovrapposte lungo il corridoio principale della rotta
 (Figura~\ref{fig:res_selected_trips}), dall'uscita del porto di Honolulu fino all'ingresso del
-porto di Kalaeloa. I secondi, in blu, se ne discostano in modo evidente: un trip compie un ampio
+porto di Kalaeloa. I secondi, in blu, se ne discostano in modo evidente. Un trip compie un ampio
 giro al largo a nord-ovest di Kalaeloa prima di entrare in porto, uno si allontana dalla costa
 verso sud per più di 10 km prima di tornare indietro, mentre gli altri seguono percorsi più
 vicini alla costa o con cambi di direzione lungo il tragitto. I trip classificati come più
@@ -482,7 +483,7 @@ anomali corrispondono quindi a traiettorie visibilmente diverse da quella tipica
  
 \subsection{Metriche di valutazione}\label{ssec:res_metrics}
 
-Il metodo non richiede etichette: i punteggi e il ranking dei trip sono ottenuti in modo
+Il metodo non richiede etichette, perché i punteggi e il ranking dei trip sono ottenuti in modo
 completamente automatico. Per valutarne quantitativamente le prestazioni, i 184 trip della
 rotta selezionata sono stati etichettati a mano, esclusivamente come riferimento per il calcolo
 delle metriche. L'etichettatura è stata svolta da un solo annotatore, a vista, osservando
@@ -520,9 +521,9 @@ Tabella~\ref{tab:res_score_ranking}.
 La Figura~\ref{fig:res_eval_cm} riporta le matrici di confusione dei due casi e la
 Tabella~\ref{tab:res_metrics} le metriche che ne derivano. I nove trip classificati come anomali
 sono tutti route deviation, quindi in entrambi i casi non ci sono falsi positivi e la precision
-è pari a 1. La recall è invece bassa: il metodo rileva 9 delle 41 anomalie del caso (a) e 9
+è pari a 1. La recall è invece bassa. Il metodo rileva 9 delle 41 anomalie del caso (a) e 9
 delle 21 route deviation del caso (b). Escludere le altre anomalie fa salire la recall da 0,220
-a 0,429 e l'F1 da 0,360 a 0,600: i trip non rilevati sono soprattutto anomalie di tipo diverso
+a 0,429 e l'F1 da 0,360 a 0,600. I trip non rilevati sono quindi soprattutto anomalie di tipo diverso
 dalle route deviation. L'accuracy è elevata in entrambi i casi (0,826 e 0,927), ma è poco
 indicativa, perché i trip normali sono la grande maggioranza.
 
@@ -555,11 +556,11 @@ AUC             & 0,751 & 0,844 \\
 La soglia di Tukey è molto severa. Per valutare il punteggio indipendentemente dalla soglia, la
 Figura~\ref{fig:res_eval_roc} riporta le curve ROC dei due casi, ottenute facendo variare la
 soglia su tutti i valori del punteggio. L'area sotto la curva (AUC) vale 0,751 nel caso (a) e
-0,844 nel caso (b). Nel caso (b) la curva sale rapidamente: con un tasso di falsi positivi di
+0,844 nel caso (b). Nel caso (b) la curva sale rapidamente. Con un tasso di falsi positivi di
 circa il 6\% si rileva circa il 71\% delle route deviation, per cui una soglia meno severa
 permetterebbe di recuperare buona parte dei trip non rilevati al prezzo di pochi falsi
 positivi. Nel caso (a), invece, la curva resta piatta per un ampio tratto e nella parte alta
-scende sotto la diagonale del classificatore casuale: alcune anomalie hanno punteggi più alti
+scende sotto la diagonale del classificatore casuale, perché alcune anomalie hanno punteggi più alti
 di quasi tutti i trip normali. Quattro di esse (i trip 23474, 8857, 8374 e 25609) compaiono tra i dieci trip con punteggio più alto
 della Tabella~\ref{tab:res_score_ranking}.
 
@@ -570,37 +571,91 @@ della Tabella~\ref{tab:res_score_ranking}.
     deviation.}\label{fig:res_eval_roc}
 \end{figure}
 
-Una possibile spiegazione di questo comportamento è legata al termine di osservazione del
-punteggio, che domina il ranking. Nelle zone davanti ai porti le navi rallentano e i punti si
-addensano, per cui la somma delle log-densità $L_i$ assume i valori più alti
-(Figura~\ref{fig:res_log_kde_map}). Un trip che compie manovre lente vicino al porto accumula
-quindi molti punti con $L_i$ elevato e ottiene un punteggio alto. Lo stesso accade per tre
-route deviation non rilevate (i trip 25652, 23889 e 10583), la cui deviazione avviene vicino al
-porto. Un trip che termina il viaggio fuori dal porto ma segue il corridoio per la maggior parte
-del percorso, invece, ottiene un punteggio nella norma, perché il punteggio è una media sui
-punti del trip. Il metodo risulta quindi adatto a rilevare le deviazioni dal corridoio lungo il
-tragitto, mentre è poco sensibile alle anomalie che riguardano la zona dei porti.
+Questo comportamento dipende dall'addensamento dei punti nelle zone portuali, dove il termine
+di osservazione assume i valori più alti, come discusso nella
+Sezione~\ref{sec:res_interpretation}.
  
 % ─────────────────────────────────────────────
 \section{Interpretazione dei risultati}\label{sec:res_interpretation}
- 
-% PLACEHOLDER: questa sezione va scritta dopo aver ottenuto i risultati
-% quantitativi. Di seguito alcune domande guida da affrontare:
-%
-% - I waypoint identificati corrispondono a porti, ancoraggi o punti di
-%   passaggio noti dell'arcipelago? Ci sono waypoint inattesi?
-% - Le rotte estratte riflettono le tratte commerciali o di traghetto
-%   conosciute tra le isole?
-% - I trip classificati come più anomali presentano caratteristiche
-%   interpretabili (deviazioni spaziali, velocità inusuali, durate anomale)?
-% - In che misura i risultati sono confrontabili con quelli riportati da
-%   Pallotta et al. nel loro dataset originale (Stretto di Gibilterra,
-%   Adriatico settentrionale)?
- 
+
+\paragraph{Waypoint e rotte.} La fase di Knowledge Discovery ha estratto una struttura del
+traffico coerente con la geografia dell'arcipelago, senza alcuna informazione a priori sui
+porti. I principali waypoint corrispondono a località note, come il porto di Honolulu
+(\texttt{WP\_135}), che è anche il nodo con più collegamenti, il porto di Kalaeloa
+(\texttt{WP\_118}), Lahaina sull'isola di Maui (\texttt{WP\_111}), la costa meridionale
+dell'isola di Lanai (\texttt{WP\_2}) e Kailua-Kona, sulla costa di Kona. I cluster
+sul bordo della bounding box non sono invece località precise, ma i punti in cui le navi
+entrano o escono dall'area di studio. Anche le rotte riflettono servizi reali. Le due rotte
+più frequentate, tra Lahaina e l'isola di Lanai, hanno un numero quasi identico di trip nei
+due versi e un medoide che segue la linea del traghetto riportata sulla mappa di base
+(Figura~\ref{fig:res_route_zoom_maui}), mentre i self-loop descrivono l'attività delle
+imbarcazioni che partono da un porto e vi ritornano.
+
+\paragraph{Peso dei termini del punteggio.} Sulla rotta selezionata il punteggio è determinato
+quasi interamente dal termine di osservazione derivato dalla KDE, perché la componente legata alla
+sequenza degli stati varia in un intervallo più piccolo di oltre tre ordini di grandezza
+(Figura~\ref{fig:res_score_distribution}) e incide poco sul ranking. Il termine di
+osservazione è la media dei valori $L_i$ dei punti del trip, cioè della somma delle
+log-densità nell'intorno di ogni punto (Sezione~\ref{ssec:meth_kde}). Un trip ottiene quindi
+un punteggio basso quando molti dei suoi punti cadono in zone poco frequentate della rotta, e un
+punteggio alto quando molti dei suoi punti cadono nelle zone più dense.
+
+\paragraph{Cosa rileva il metodo.} I trip con punteggio più basso sono deviazioni dal corridoio
+evidenti sulla mappa (Figura~\ref{fig:res_score_trips_map}), e i nove trip sotto la soglia di
+Tukey sono tutti route deviation. Il metodo è quindi adatto a rilevare le deviazioni dal
+corridoio lungo il tragitto, cioè proprio il tipo di anomalia per cui è stato pensato, e non
+produce falsi positivi con la soglia scelta. La soglia di Tukey, fissata senza usare le
+etichette, è però molto severa. La curva ROC delle sole route deviation
+(Figura~\ref{fig:res_eval_roc}) mostra che una soglia meno restrittiva recupererebbe gran parte
+delle deviazioni non rilevate al prezzo di pochi falsi positivi. La scelta della soglia dipende
+dall'applicazione e, come osservato in~\cite{pallotta}, va fissata in base ai tassi di rilevamento
+e di falso allarme richiesti.
+
+\paragraph{Il limite delle zone portuali.} Il metodo è invece poco sensibile alle anomalie che
+riguardano la zona dei porti. Davanti ai porti le navi rallentano e i punti si addensano, per
+cui $L_i$ assume i valori più alti della rotta (Figura~\ref{fig:res_log_kde_map}). Un trip che
+compie manovre lente nella zona di avvicinamento al porto accumula molti punti con $L_i$
+elevato e ottiene un punteggio alto anziché basso. Quattro anomalie compaiono infatti tra i
+dieci trip con punteggio più alto (Tabella~\ref{tab:res_score_ranking}), e per questo la curva
+ROC che considera tutte le anomalie scende sotto la diagonale. Per lo stesso motivo non vengono
+rilevate le route deviation che avvengono vicino al porto, come i trip 25652, 23889 e 10583. I trip che terminano il viaggio
+fuori dal porto, infine, seguono il corridoio per la maggior parte del percorso e, poiché il
+punteggio è una media su tutti i punti del trip, il tratto finale anomalo pesa poco sul
+risultato. Il punteggio misura quindi quanto un trip si trova nelle zone frequentate della
+rotta, più che quanto il suo comportamento sia insolito rispetto a quello atteso in ciascuna
+zona.
+
+\paragraph{Confronto con il lavoro di riferimento.} Un confronto quantitativo con~\cite{pallotta}
+non è possibile. L'articolo applica la metodologia allo Stretto di Gibilterra e al Mare
+Adriatico settentrionale, ma per l'anomaly detection riporta solo un esempio qualitativo, una
+nave che compie una doppia inversione di rotta davanti al porto di Livorno, senza metriche di
+rilevamento. Esistono inoltre alcune differenze di impostazione. In~\cite{pallotta} l'anomaly
+detection è eseguita online, su una finestra temporale mobile che considera solo i punti più
+recenti della traccia, mentre in questo lavoro il punteggio è calcolato a posteriori sull'intero
+trip. Anche il termine di osservazione basato sull'intorno di 500 m e la probabilità a priori
+della rotta sono calcolati in modo diverso, come descritto nel
+Capitolo~\ref{chap:methodology}. Il comportamento
+nelle zone portuali è in parte una conseguenza di queste scelte. Una finestra mobile, infatti,
+potrebbe rendere visibili anche le anomalie localizzate in un breve tratto del trip, che la
+media sull'intero trip tende ad attenuare.
+
 % ─────────────────────────────────────────────
 \section{Sintesi}\label{sec:res_summary}
- 
-% PLACEHOLDER: scrivere dopo aver completato le sezioni precedenti.
-% La sintesi dovrà riprendere brevemente i risultati principali e
-% anticipare il Capitolo~\ref{chap:conclusions}, in cui verranno discusse
-% le conclusioni generali e le possibili direzioni future.
+
+Applicata ai messaggi AIS delle Hawaii del primo trimestre del 2019, la pipeline ha ridotto
+5.462.415 record a 5.415.129 record puliti e ha estratto, senza supervisione, 144 waypoint, tra cui
+i principali porti dell'arcipelago, e 766 rotte, per un totale di 36.033 trip.
+Le rotte più frequentate riflettono servizi di linea reali, come il collegamento tra Lahaina e
+l'isola di Lanai.
+
+Sulla rotta \texttt{WP\_135 - WP\_118}, dal porto di Honolulu a Kalaeloa, il modello di anomaly
+detection ha assegnato un punteggio a 184 trip. Il ranking è determinato quasi interamente dal
+termine di osservazione derivato dalla KDE, e i trip con punteggio più basso sono deviazioni
+visibili dal corridoio della rotta. Rispetto a un'etichettatura manuale usata solo come
+riferimento, il metodo con la soglia di Tukey non produce falsi positivi e rileva 9 delle 21
+route deviation; l'AUC è pari a 0,844 sulle sole route deviation e scende a 0,751 includendo
+le altre anomalie. Il limite principale riguarda le zone portuali, dove l'addensamento dei
+punti fa ottenere punteggi alti alle manovre lente e alle deviazioni vicine al porto.
+
+Questi risultati, insieme ai possibili sviluppi del metodo, sono discussi nel
+Capitolo~\ref{chap:conclusions}.

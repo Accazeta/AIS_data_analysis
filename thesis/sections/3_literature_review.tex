@@ -91,8 +91,8 @@ Di seguito le 5 tipologie di anomalie:
  
     \item \textbf{Avvicinamento ravvicinato} (\textit{close approach}):
         due navi si portano a distanza molto ridotta l'una dall'altra al di fuori
-        di contesti giustificati (ad esempio le aree portuali), 
-        il che potrebbe indicare un passaggio non dichiarato
+        di contesti in cui sia legittimo farlo (ad esempio le aree portuali), 
+        il che potrebbe indicare il tentativo di nascondere il trasferimento
         di merci o persone.
 
     \item \textbf{Ingresso in zona} (\textit{zone entry}):
@@ -120,8 +120,8 @@ Tra i primi, DBSCAN è particolarmente diffuso, in quanto si adatta bene alla na
 consente di identificare cluster senza specificarne a priori il numero. Un esempio rappresentativo è il framework TREAD
 di Pallotta et al.~\cite{pallotta}, che applica l'algoritmo DBSCAN in maniera incrementale per individuare i
 "waypoint" caratteristici del traffico (principalmente porti, piattaforme offshore, punti di ingresso e uscita
-dall'area monitorata). Le nuove rotte vengono confrontate con il modello appreso e, se la sua probabilità rispetto
-alle rotte note risulta bassa, viene scartata.
+dall'area monitorata). Le nuove rotte vengono confrontate con il modello appreso fino a quel momento e,
+ se la loro probabilità rispetto alle rotte già note risulta bassa, vengono scartate.
 
 Le reti neurali, invece, permettono di modellare relazioni più complesse e non lineari, 
 e nelle versioni più recenti hanno mostrato buone prestazioni.
@@ -175,7 +175,7 @@ Tra gli approcci presenti in letteratura, il metodo adottato in questo lavoro è
 (Traffic Route Extraction and Anomaly Detection) proposto da~\cite{pallotta}, 
 che combina tecniche di clustering e analisi statistica.
 
-Il framework è non supervisionato e incrementale: apprende i pattern di traffico direttamente dai dati AIS 
+Il framework è non supervisionato e incrementale, ossia apprende i pattern di traffico direttamente dai dati AIS 
 senza richiedere informazioni preliminari. Il processo si articola in due fasi principali. 
 Nella prima fase, vengono identificati i waypoint caratteristici (come porti o punti di passaggio) 
 tramite un algoritmo di clustering basato su DBSCAN. Tali waypoint vengono usati per costruire le rotte, definite
