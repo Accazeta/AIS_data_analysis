@@ -69,7 +69,7 @@ strutture geograficamente coerenti con il traffico marittimo dell'arcipelago del
 Hawaii.
 
 Tutte le mappe di questa sezione seguono le stesse convenzioni. Il riquadro rosso
-delimita il dominio di analisi, cioè la bounding box descritta nella
+delimita l'area di studio, cioè la bounding box descritta nella
 Sezione~\ref{sec:meth_dataset}, e la barra in basso a destra indica la scala della mappa,
 che varia da una figura all'altra. Ogni waypoint è rappresentato dal suo inviluppo
 convesso (\emph{convex hull}), con il contorno nero; nelle mappe delle rotte accanto a ogni
@@ -87,7 +87,7 @@ $\text{cluster\_selection\_epsilon} = 0{,}01$), con i parametri descritti nella 
 i punti colorati sono quelli assegnati a un cluster e i punti bianchi quelli classificati
 come rumore. Il colore indica il peso di ciascuna coordinata aggregata, pari al logaritmo in
 base 2 del numero di messaggi AIS che vi ricadono, arrotondato all'intero più vicino
-(Sezione~\ref{ssec:meth_clustering}); si tratta quindi di una grandezza adimensionale.
+(Sezione~\ref{ssec:meth_clustering}).
 
 \begin{figure}[htbp]
     \centering
@@ -128,8 +128,7 @@ fasi successive della pipeline.
  
 Per visualizzare le rotte, i trip sono stati divisi in tre gruppi in base ai waypoint di
 origine e di destinazione, cioè rotte tra due waypoint distinti (\texttt{WP\_A - WP\_B}),
-rotte che tornano al waypoint di partenza (\texttt{WP\_A - WP\_A}, di seguito
-\emph{self-loop}) e rotte con almeno un estremo non classificato (\texttt{<NA>}).
+rotte che tornano al waypoint di partenza (\texttt{WP\_A - WP\_A}, \emph{self-loop}) e rotte con almeno un estremo non classificato (\texttt{<NA>}).
 Dei 36.033 trip estratti, 4.089 (11,3\%) appartengono al primo gruppo, 30.981 (86,0\%) al
 secondo e 963 (2,7\%) al terzo.
 
@@ -298,8 +297,8 @@ La Figura~\ref{fig:res_selected_trips} mostra i punti dei 184 trip della rotta s
 \texttt{WP\_135 - WP\_118}, dal porto di Honolulu a Kalaeloa, lungo la costa meridionale
 dell'isola di Oahu. Ogni punto è colorato in base alla velocità media \texttt{Avg\_Speed}
 (Sezione~\ref{ssec:meth_status}) ed è accompagnato da una freccia grigia, orientata secondo la
-rotta sul fondo (\texttt{COG}) e di lunghezza proporzionale alla velocità media. Per contenere il
-tempo di visualizzazione, la mappa mostra un campione casuale uniforme di 5.000 dei 20.241 punti
+rotta sul fondo (\texttt{COG}) e di lunghezza proporzionale alla velocità media. Per scongiurare problemi di
+caricamento e visualizzazione del disegno, la mappa mostra un campione casuale uniforme di 5.000 dei 20.241 punti
 della rotta. La maggior parte dei punti si concentra in un corridoio parallelo alla costa, con
 velocità più basse in prossimità dei due porti; alcuni trip se ne discostano, allontanandosi
 verso il largo prima di raggiungere la destinazione.
@@ -394,8 +393,8 @@ parametro di scala cresce da circa 125 m a circa 2.551 m.
 
 La Figura~\ref{fig:res_weibull_regression} mostra a sinistra i parametri di scala stimati ai
 diversi lag e la retta $\alpha = m \cdot \Delta t$ ottenuta per regressione, a destra le
-probabilità di transizione (equazione~14 di~\cite{pallotta}) che ne derivano per tre lag.
-La relazione lineare ipotizzata da~\cite{pallotta} descrive i dati solo in modo
+probabilità di transizione (equazione~14 di Pallotta et al.~\cite{pallotta}) che ne derivano per tre lag.
+La relazione lineare ipotizzata da Pallotta et al.~\cite{pallotta} descrive i dati solo in modo
 approssimativo. I parametri di scala crescono più che linearmente con il lag, per cui la retta
 sovrastima $\alpha$ per i lag brevi e lo sottostima per quelli lunghi. Anche il parametro di
 forma, che nel modello originale è considerato pressoché costante, aumenta al crescere del
@@ -581,8 +580,7 @@ Sezione~\ref{sec:res_interpretation}.
 traffico coerente con la geografia dell'arcipelago, senza alcuna informazione a priori sui
 porti. I principali waypoint corrispondono a località note, come il porto di Honolulu
 (\texttt{WP\_135}), che è anche il nodo con più collegamenti, il porto di Kalaeloa
-(\texttt{WP\_118}), Lahaina sull'isola di Maui (\texttt{WP\_111}), la costa meridionale
-dell'isola di Lanai (\texttt{WP\_2}) e Kailua-Kona, sulla costa di Kona. I cluster
+(\texttt{WP\_118}) e altri porti importanti. I cluster
 sul bordo della bounding box non sono invece località precise, ma i punti in cui le navi
 entrano o escono dall'area di studio. Anche le rotte riflettono servizi reali. Le due rotte
 più frequentate, tra Lahaina e l'isola di Lanai, hanno un numero quasi identico di trip nei
@@ -607,7 +605,7 @@ produce falsi positivi con la soglia scelta. La soglia di Tukey, fissata senza u
 etichette, è però molto severa. La curva ROC delle sole route deviation
 (Figura~\ref{fig:res_eval_roc}) mostra che una soglia meno restrittiva recupererebbe gran parte
 delle deviazioni non rilevate al prezzo di pochi falsi positivi. La scelta della soglia dipende
-dall'applicazione e, come osservato in~\cite{pallotta}, va fissata in base ai tassi di rilevamento
+dall'applicazione e, come osservato da Pallotta et al.~\cite{pallotta}, va fissata in base ai tassi di rilevamento
 e di falso allarme richiesti.
 
 \paragraph{Il limite delle zone portuali.} Il metodo è invece poco sensibile alle anomalie che
@@ -625,11 +623,11 @@ risultato. Il punteggio misura quindi quanto un trip si trova nelle zone frequen
 rotta, più che quanto il suo comportamento sia insolito rispetto a quello atteso in ciascuna
 zona.
 
-\paragraph{Confronto con il lavoro di riferimento.} Un confronto quantitativo con~\cite{pallotta}
+\paragraph{Confronto con il lavoro di riferimento.} Un confronto quantitativo con il lavoro di Pallotta et al.~\cite{pallotta}
 non è possibile. L'articolo applica la metodologia allo Stretto di Gibilterra e al Mare
 Adriatico settentrionale, ma per l'anomaly detection riporta solo un esempio qualitativo, una
 nave che compie una doppia inversione di rotta davanti al porto di Livorno, senza metriche di
-rilevamento. Esistono inoltre alcune differenze di impostazione. In~\cite{pallotta} l'anomaly
+rilevamento. Esistono inoltre alcune differenze di impostazione. Nel lavoro di riferimento l'anomaly
 detection è eseguita online, su una finestra temporale mobile che considera solo i punti più
 recenti della traccia, mentre in questo lavoro il punteggio è calcolato a posteriori sull'intero
 trip. Anche il termine di osservazione basato sull'intorno di 500 m, la predizione della posizione e la

@@ -17,21 +17,21 @@ la direzione del moto, lo stato di navigazione e altre caratteristiche statiche,
 La frequenza di trasmissione varia con la velocità e lo stato della nave, da pochi secondi a qualche minuto;
 i dati utilizzati in questa tesi, come si vedrà, sono invece campionati a un record al minuto.
 Grazie alla larga adozione del sistema, anche aree circoscritte ma trafficate generano grandi moli di dati,
-che per vastità, rumorosità e complessità richiedono tecniche automatiche per essere sfruttate.
+che per vastità, rumorosità e complessità richiedono tecniche automatiche per essere analizzate.
 
 \section{Il problema dei comportamenti anomali}\label{sec:intro_problem}
 
 Tra le informazioni che si possono estrarre dai dati AIS, una delle più utili è la segnalazione dei
 comportamenti anomali, cioè dei movimenti che si discostano da quelli abituali.
-Una nave che abbandona il corridoio percorso di solito tra due porti, che si ferma in un punto insolito
+Una nave che devia dal percorso solito tra due porti, che si ferma in un punto insolito
 o che conclude il proprio viaggio lontano da un porto può essere in difficoltà, oppure coinvolta in attività
 illecite come il contrabbando o la pesca in aree protette.
 Questa tesi si concentra sulla prima di queste situazioni, la \emph{route deviation} (deviazione dalla rotta),
 che è anche la tipologia di anomalia più studiata in letteratura; le altre categorie sono descritte nel
 Capitolo~\ref{chap:literature}.
 
-Riconoscere queste situazioni a mano non è praticabile: un solo trimestre di dati relativi a un arcipelago
-contiene milioni di messaggi, e in generale non esiste un elenco di casi già classificati come normali o anomali
+In linea di massima riconoscere queste situazioni a mano è complicato e spesso richiede competenze ed esperienze
+specifiche. Inoltre, non esiste un elenco di casi già classificati come normali o anomali
 da cui partire.
 Servono quindi metodi \emph{non supervisionati}, in grado di apprendere dai soli dati storici che cosa sia
 il comportamento normale e di segnalare ciò che se ne discosta.
@@ -40,8 +40,8 @@ il comportamento normale e di segnalare ciò che se ne discosta.
 
 Il metodo adottato è il framework TREAD (Traffic Route Extraction and Anomaly Detection), proposto
 da Pallotta et al.~\cite{pallotta} e pubblicato nel 2013.
-L'idea alla base è semplice. Dai dati storici si individuano dapprima i \emph{waypoint}, cioè le aree in cui
-le navi si fermano oppure entrano o escono dalla zona osservata, come porti e ancoraggi.
+L'idea di base è la seguente: dai dati storici si individuano prima i \emph{waypoint}, cioè le aree in cui
+le navi si fermano (ad esempio aree portuali) oppure entrano o escono dall'area di studio.
 I percorsi seguiti dalle navi da un waypoint all'altro definiscono poi le \emph{rotte}, e ogni singolo viaggio
 compiuto da una nave lungo una rotta prende il nome di \emph{trip}.
 A ogni trip viene infine assegnato un punteggio che risponde a due domande: i punti del trip si trovano dove
@@ -51,7 +51,7 @@ Un trip che passa per zone poco frequentate, o che si muove in modo difficile da
 che lo distingue dai trip normali.
 
 Il metodo risale a più di dieci anni fa ed è stato sviluppato con le tecnologie dell'epoca.
-L'obiettivo della tesi è riproporlo, re-implementandolo con gli strumenti oggi disponibili e applicandolo
+L'obiettivo della tesi è di riproporlo, implementandolo di nuovo con gli strumenti oggi disponibili e applicandolo
 a un dataset AIS di grandi dimensioni. Il metodo è ripreso nella sua struttura generale, mentre alcuni passaggi
 sono stati adattati o migliorati.
 
@@ -62,7 +62,7 @@ I quesiti di ricerca su cui è stato sviluppato il lavoro sono i seguenti:
     \item Il framework TREAD, sviluppato agli inizi degli anni 2010, è ancora applicabile con gli strumenti attuali
           a un dataset AIS reale di milioni di record?
     \item Quali aspetti e caratteristiche dell'algoritmo sono ``riciclabili'' e quali hanno richiesto adattamenti o sostituzioni?
-    \item Quali passaggi del metodo possono essere migliorati con gli strumenti attuali, e con quali effetti?
+    \item Quali passaggi del metodo originale possono essere migliorati con gli strumenti attuali?
     \item Quali metriche è opportuno utilizzare per quantificare le prestazioni dell'algoritmo?
 \end{enumerate}
 
@@ -72,7 +72,7 @@ I dati utilizzati sono i messaggi AIS pubblicati dal NOAA (National Oceanic and 
 l'agenzia statunitense che tra i suoi compiti ha il monitoraggio oceanico.
 Sono stati preferiti ad altre fonti perché sottoposti dall'ente a un controllo di qualità, e perché gli attributi
 statici delle navi sono verificati sul registro ufficiale della Guardia Costiera statunitense~\cite{noaa_ais2019}.
-L'area di studio è l'arcipelago delle Hawaii, una zona circoscritta ma con un traffico intenso ed eterogeneo,
+L'area oggetto di studio è l'arcipelago delle Hawaii, scelto perchè è una zona circoscritta ma con un traffico intenso ed eterogeneo,
 che va dai pescherecci alle navi mercantili e passeggeri, fino ai rimorchiatori e alle imbarcazioni da diporto.
 Il periodo analizzato copre i mesi da gennaio a marzo 2019. La durata di tre mesi è dettata dall'hardware disponibile;
 l'anno 2019 è stato scelto in quanto ultimo prima della pandemia di Covid-19, così da evitare possibili effetti
@@ -87,8 +87,7 @@ Rispetto al lavoro originale, la tesi apporta i seguenti contributi:
           volumi di dati;
     \item l'identificazione dei waypoint tramite H-DBSCAN, in grado di gestire aree a densità di traffico molto
           diversa, al posto di DBSCAN;
-    \item un calcolo diretto delle componenti della velocità, che evita di gestire l'ambiguità di quadrante
-          dell'arcotangente;
+    \item un calcolo diretto delle componenti della velocità;
     \item una valutazione quantitativa del punteggio tramite un insieme di trip etichettati manualmente,
           assente nel lavoro originale.
 \end{itemize}

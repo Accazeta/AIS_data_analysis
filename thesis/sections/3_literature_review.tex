@@ -1,5 +1,5 @@
 % sections/literature_review.tex
-\chapter{Literature Review}
+\chapter{Stato dell'arte}
 \label{chap:literature}
 
 % ─────────────────────────────────────────────
@@ -7,7 +7,7 @@
 \label{sec:contesto}
 
 
-L’obiettivo di questa literature review è quello di esplorare lo stato dell’arte delle tecniche 
+L’obiettivo di questo capitolo è quello di esplorare lo stato dell’arte delle tecniche 
 di analisi dei dati AIS per il rilevamento di anomalie nel traffico marittimo, 
 cercando di fornire una panoramica generale.
 
@@ -15,18 +15,18 @@ cercando di fornire una panoramica generale.
 
 L’Automatic Identification System (AIS) è un sistema di comunicazione utilizzato nella navigazione marittima. 
 La sua origine viene generalmente attribuita a Benny Pettersson, che sviluppò un primo prototipo nei primi anni 
-’90. Inizialmente concepito per ridurre il rischio di collisioni in mare, il sistema è stato poi 
-progressivamente adottato a livello internazionale, fino a ottenere un riconoscimento formale da parte 
-dell’International Maritime Organization (IMO). 
+’90. Inizialmente venne concepito per ridurre il rischio di collisioni in mare in condizioni di scarsa visibilità;
+l'efficacia di tale strumento e il riconoscimento formale da parte dell'International Maritime Organization (IMO) hanno 
+fatto si che tale sistema venisse progressivamente adottato a livello internazionale.
 Nell’ambito dell’accordo SOLAS, l’installazione dell’AIS è diventata obbligatoria per le navi con 
 stazza lorda superiore a 300 tonnellate impegnate in viaggi internazionali e per tutte le navi passeggeri 
 \cite{imo2004}.
 
 Dal punto di vista tecnico, l’AIS opera su due canali radio VHF intorno ai 162 MHz 
 e utilizza il protocollo TDMA (Time-Division Multiple Access), 
-che permette a più imbarcazioni di trasmettere senza interferire tra loro \cite{riassuntone}. 
+che consente a più imbarcazioni di trasmettere senza interferire tra loro \cite{riassuntone}. 
 La copertura, in condizioni standard, arriva fino a circa 50 km (linea di vista), 
-mentre l’uso di ricevitori satellitari (S-AIS) consente di estenderla anche alle acque oceaniche \cite{riassuntone}.
+mentre l’integrazione di un collegamento via satellite (S-AIS) consente di estenderla anche alle acque oceaniche \cite{riassuntone}.
  La frequenza di trasmissione dei messaggi non è costante, ma varia in funzione della velocità e dello stato 
  della nave, passando da pochi secondi a diversi minuti \cite{riassuntone}.
 
@@ -37,7 +37,7 @@ I messaggi AIS possono essere suddivisi in tre categorie principali \cite{riassu
 \begin{itemize}
 \item \textbf{Dati statici}: includono informazioni identificative della nave, come MMSI, nome, tipo e dimensioni.
 \item \textbf{Dati dinamici}: descrivono lo stato corrente della navigazione, tra cui posizione GPS, velocità (SOG), rotta (COG), orientamento della prua (HE), variazione della rotta (ROT) e stato operativo.
-\item \textbf{Dati di viaggio}: comprendono informazioni aggiuntive come pescaggio, tipo di carico, destinazione ed ETA. Essendo inseriti manualmente, risultano generalmente meno affidabili \cite{pallotta}.
+\item \textbf{Dati di viaggio}: comprendono informazioni aggiuntive come pescaggio, tipo di carico, destinazione ed tempo stimato di arrivo (ETA). Essendo inseriti manualmente, risultano generalmente meno affidabili \cite{pallotta}.
 \end{itemize}
 
 Ai fini dell’analisi del comportamento delle navi, i dati dinamici sono in genere i più rilevanti, 
@@ -54,19 +54,16 @@ rendendo possibile la manipolazione dei dati, ad esempio tramite spoofing o speg
 Un ulteriore problema è rappresentato dalla diversa frequenza di trasmissione tra le varie classi di 
 imbarcazioni, che introduce una certa eterogeneità nei dataset.
 
-Nel complesso, la dimensione, la rumorosità e la complessità di questi dati rendono necessario 
-l’utilizzo di tecniche automatiche di analisi dei dati.
-
 % ─────────────────────────────────────────────
 \section{Panoramica degli approcci di anomaly detection}
 \label{sec:panoramica}
 
 La letteratura sull'anomaly detection nei dati AIS è stata raccolta e 
-sistematizzata da~\cite{riassuntone}, che analizza 44 contributi pubblicati 
+sistematizzata da Wolsing et al.~\cite{riassuntone}, che analizza 44 contributi pubblicati 
 tra il 2007 e il 2021.
 Prima di esplorare i possibili approcci risolutivi, è utile adottare un'opportuna
 classificazione delle potenziali anomalie da rilevare tramite l'analisi dei dati AIS.
-Nell'ambito di questo lavoro di tesi tale classificazione viene presa da~\cite{lane2010}.
+Nell'ambito di questo lavoro di tesi tale classificazione viene presa da Lane et al.~\cite{lane2010}.
 
 Di seguito le 5 tipologie di anomalie:
 
@@ -87,7 +84,8 @@ Di seguito le 5 tipologie di anomalie:
         una nave approda in un porto non previsto o incoerente rispetto
         alla destinazione dichiarata o alla rotta storica. Questo
         comportamento può essere indicativo di attività illecite quali il
-        contrabbando o l'evasione dei controlli doganali.
+        contrabbando, l'evasione dei controlli doganali oppure essere associato
+        ad errori o dimenticanze nella compilazione dei dati di viaggio.
  
     \item \textbf{Avvicinamento ravvicinato} (\textit{close approach}):
         due navi si portano a distanza molto ridotta l'una dall'altra al di fuori
@@ -101,11 +99,7 @@ Di seguito le 5 tipologie di anomalie:
         zone di pesca protette o aree riservate a determinate imbarcazioni).
 \end{enumerate}
 
-Per ciascuna di queste categorie, Lane et al.~\cite{lane2010} propongono un algoritmo probabilistico,
-i cui output vengono poi aggregati tramite una rete bayesiana per ottenere una stima complessiva della 
-probabilità che una anomalia sia effettivamente in corso.
-
-Nel resoconto prodotto dall'analisi sistematica condotta da~\cite{riassuntone} sui vari approcci risolutivi, 
+Nel resoconto prodotto dall'analisi sistematica condotta da Wolsing et al.~\cite{riassuntone} sui vari approcci risolutivi, 
 si evince come la maggior parte dei contributi adotta una struttura in due fasi: 
 prima viene costruito un modello del traffico normale a partire dai dati storici,
 poi si identificano le traiettorie che si discostano da quel modello come potenziali anomalie.
@@ -140,7 +134,7 @@ classificano come anomale quelle con bassa probabilità.
 Offrono una buona base teorica e permettono di quantificare l’incertezza, ma possono risultare onerosi 
 dal punto di vista computazionale su dataset molto grandi.
 
-Alcuni lavori, come~\cite{kowalska}, mostrano l’efficacia dei Gaussian Process.
+Alcuni lavori, come quello di Kowalska et al.~\cite{kowalska}, mostrano l’efficacia dei Gaussian Process.
 In particolare nel loro lavoro Kowalska et al. propongono un modello non parametrico basato su un Gaussian Process per apprendere
 il comportamento normale delle navi a partire dai dati AIS. Il loro modello assegna a ciascuna trasmissione ricevuta 
 una misura di normalità in funzione della velocità osservata rispetto alla posizione geografica:
@@ -172,14 +166,14 @@ rumore rispetto ad altri approcci.
 \label{sec:tread}
 
 Tra gli approcci presenti in letteratura, il metodo adottato in questo lavoro è il framework TREAD 
-(Traffic Route Extraction and Anomaly Detection) proposto da~\cite{pallotta}, 
+(Traffic Route Extraction and Anomaly Detection) proposto da Pallotta et al.~\cite{pallotta}, 
 che combina tecniche di clustering e analisi statistica.
 
 Il framework è non supervisionato e incrementale, ossia apprende i pattern di traffico direttamente dai dati AIS 
 senza richiedere informazioni preliminari. Il processo si articola in due fasi principali. 
-Nella prima fase, vengono identificati i waypoint caratteristici (come porti o punti di passaggio) 
+Nella prima fase, vengono identificati i waypoint caratteristici (come porti o punti di ingresso/uscita) 
 tramite un algoritmo di clustering basato su DBSCAN. Tali waypoint vengono usati per costruire le rotte, definite
-come il percorso di un nave da un waypoint di partenza a uno di arrivo. Talvolta waypoint di partenza e di arrivo coincidono.
+come il percorso di un nave da un waypoint di partenza a uno di arrivo. Waypoint di partenza e di arrivo possono coincidere.
 
 Nella seconda fase, le rotte apprese vengono utilizzate per analizzare nuove traiettorie e 
 individuare eventuali anomalie, sulla base della loro probabilità rispetto al modello.
