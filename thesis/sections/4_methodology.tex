@@ -380,22 +380,48 @@ Poiché gli inviluppi convessi di cluster diversi possono sovrapporsi, un punto 
 in più di un waypoint; in tal caso viene assegnato a quello con indice minore.
 Per valutare l'impatto di questa scelta, viene inoltre calcolato il numero di punti che
 ricadono in più di un waypoint.
-Un waypoint è considerato \emph{significativo} per un dato punto se quest'ultimo soddisfa almeno una delle condizioni seguenti: 
-\texttt{Avg\_Speed} $\leq$ \texttt{SPEED\_THRESHOLD}, oppure il suo \texttt{EstimatedStatus} è \emph{entry} o \emph{exit}.
+Non tutti i punti che ricadono in un waypoint indicano però che la nave vi ha fatto tappa: una nave
+può attraversare l'area di un waypoint senza fermarsi, ad esempio passando davanti a un porto.
+Per questo un waypoint è considerato \emph{significativo} per un dato punto solo se quest'ultimo
+soddisfa almeno una delle condizioni seguenti: \texttt{Avg\_Speed} $\leq$ \texttt{SPEED\_THRESHOLD},
+oppure il suo \texttt{EstimatedStatus} è \emph{entry} o \emph{exit}. In altre parole, un waypoint
+significativo è un'area in cui l'imbarcazione sosta, entra nell'area di studio o ne esce.
 
+Prima di descrivere l'assegnazione delle rotte, è opportuno distinguere due concetti
+fondamentali. Una \textbf{rotta} è un'entità astratta che modella il fatto che almeno una volta una
+nave ha viaggiato dal waypoint di partenza a quello di arrivo (e non il viceversa).
+Ipotizzando di modellare i waypoint come nodi di un grafo orientato, una rotta sarebbe uno degli archi.
+Un \textbf{trip} indica invece il singolo viaggio compiuto da una specifica nave lungo una rotta.
+A ogni rotta possono quindi essere associati più trip, anche della stessa nave, che può percorrere
+la stessa rotta più volte nel periodo analizzato: il numero di trip di una rotta è quindi maggiore
+o uguale al numero di navi che l'hanno percorsa.
 
 L'assegnazione delle rotte avviene una nave alla volta, all'interno di ogni coppia
-(\emph{entry}, \emph{exit}) identificata nel dataset. A ogni punto viene assegnata
-un'etichetta secondo la seguente logica:
+(\emph{entry}, \emph{exit}) identificata nel dataset, cioè per ogni periodo in cui la nave è presente
+nell'area di studio. A ogni punto viene assegnata un'etichetta secondo la seguente logica:
 \begin{itemize}
     \item se il punto si trova all'interno di un waypoint significativo, l'etichetta
           corrisponde al nome di quel waypoint;
-    \item se il punto si trova in navigazione tra due waypoint, l'etichetta assume il
+    \item se il punto si trova in navigazione tra due waypoint significativi, l'etichetta assume il
           formato \texttt{WP\_X - WP\_Y}, dove \texttt{WP\_X} e \texttt{WP\_Y} sono
-          rispettivamente il waypoint di provenienza e quello di destinazione; nei casi
+          rispettivamente il waypoint significativo precedente e quello successivo; nei casi
           in cui uno o entrambi non siano identificabili, viene utilizzato il
           segnaposto \texttt{<NA>}.
 \end{itemize}
+I trip si ottengono infine raggruppando i punti consecutivi della stessa nave che hanno la stessa
+etichetta di rotta, per cui ogni tratto di navigazione compreso tra due waypoint significativi
+costituisce un trip. Se il waypoint significativo di partenza e quello di arrivo coincidono, l'etichetta
+assume la forma
+\texttt{WP\_X - WP\_X} e la rotta corrispondente è detta \emph{self-loop}.
+
+Si consideri ad esempio una nave ferma nel porto di Honolulu (\texttt{WP\_135}) che salpa, raggiunge
+il porto di Kalaeloa (\texttt{WP\_118}) e vi si ferma. I punti registrati durante la sosta a Honolulu
+ricevono l'etichetta \texttt{WP\_135}, quelli della navigazione l'etichetta \texttt{WP\_135 - WP\_118}
+e quelli della sosta a Kalaeloa l'etichetta \texttt{WP\_118}. La navigazione costituisce quindi un trip
+della rotta \texttt{WP\_135 - WP\_118}. Se la nave torna poi a Honolulu, i punti del viaggio di ritorno
+formano un nuovo trip, che appartiene alla rotta opposta \texttt{WP\_118 - WP\_135}. Se invece la nave
+uscisse da Honolulu e vi rientrasse senza fermarsi altrove, il viaggio sarebbe un trip del self-loop
+\texttt{WP\_135 - WP\_135}.
 
 Con queste ultime operazioni, termina la fase di Knowledge Discovery: ogni punto
 del dataset ha associata un'etichetta di rotta secondo i criteri appena descritti, e il
@@ -404,123 +430,224 @@ Exploitation.
 
 % -----------------------------------------------------------------------
 \section{Anomaly detection}\label{sec:meth_anomaly}
- 
-Prima di descrivere la fase di anomaly detection, è opportuno distinguere due concetti
-fondamentali. Una \textbf{rotta} è un'entità astratta che modella il fatto che almeno una volta una 
-nave ha viaggiato dal waypoint di partenza a quello di arrivo (e non il viceversa).
-Ipotizzando di modellare i waypoint come nodi di un grafo orientato, una rotta sarebbe uno degli archi.
-Un \textbf{trip} indica invece il singolo viaggio compiuto da una specifica nave lungo una rotta. 
-A ogni rotta possono quindi essere associati più trip, anche della stessa nave, che può percorrere
-la stessa rotta più volte nel periodo analizzato: il numero di trip di una rotta è quindi maggiore
-o uguale al numero di navi che l'hanno percorsa.
 
-La fase di anomaly detection segue le equazioni del framework TREAD originale~\cite{pallotta}.
- L'analisi si concentra su una singola rotta selezionata (una delle più trafficate tra quelle estratte nella fase precedente) 
- e utilizza i trip associati a tale rotta come unità di analisi.
- 
-\subsection{Decomposizione della velocità e preparazione delle feature}
- 
-Per ogni punto del dataset vengono calcolate le componenti cartesiane della velocità $V_x$
-e $V_y$ a partire da \texttt{SOG} e \texttt{COG}. Il COG, espresso in gradi rispetto al
+La fase di anomaly detection assegna a ogni trip un punteggio che misura quanto il trip è compatibile
+con il comportamento abituale delle navi sulla rotta che percorre. Il punteggio risponde a due domande.
+La prima è se i punti del trip si trovano nelle zone in cui passano di solito le navi della rotta.
+La seconda è se il moto della nave da un punto al successivo è prevedibile a partire dalla posizione
+e dalla velocità precedenti. Il punteggio è costruito come una log-probabilità e prende il nome di
+\emph{punteggio di normalità}: valori alti indicano un trip normale, valori bassi un trip
+potenzialmente anomalo.
+
+L'analisi si concentra su una singola rotta, una delle più trafficate tra quelle estratte nella fase
+precedente, e utilizza i trip associati a tale rotta come unità di analisi. La rotta selezionata è
+quella dal porto di Honolulu al porto di Kalaeloa, presentata nel Capitolo~\ref{chap:results}.
+
+\subsection{Il modello probabilistico di riferimento}\label{ssec:meth_model}
+
+Nel framework di Pallotta et al.~\cite{pallotta} il comportamento di una nave è descritto da una \emph{traccia}, cioè da una sequenza
+di $T$ osservazioni
+\[
+    V = \{v_1, v_2, \dots, v_T\}, \qquad v_t = [x_t,\, y_t,\, \dot{x}_t,\, \dot{y}_t]^\top ,
+\]
+ciascuna delle quali contiene la posizione $[x_t, y_t]$ e le componenti della velocità
+$[\dot{x}_t, \dot{y}_t]$ della nave. A ogni osservazione è associato uno \emph{stato} $s_t$, cioè la
+regione circolare di raggio $d$ centrata nella posizione osservata, per cui la traccia corrisponde a
+una sequenza di stati $\bar{S} = \{s_1, \dots, s_T\}$. Questo concetto di stato non va confuso con lo
+stato di navigazione (\texttt{EstimatedStatus}) introdotto nella Sezione~\ref{ssec:meth_status}.
+
+Pallotta et al.\ associano una traccia alla rotta $R$ che rende massima la probabilità a posteriori,
+che per la regola di Bayes si scompone come
+\begin{equation}\label{eq:meth_posterior}
+    P(R \mid V, \bar{S}) \;\propto\; P(V \mid \bar{S}, R)\; P(\bar{S} \mid R)\; P(R) .
+\end{equation}
+I tre fattori hanno un significato intuitivo. Il primo misura quanto le osservazioni sono compatibili
+con i punti della rotta che cadono nei rispettivi stati. Assumendo le osservazioni indipendenti tra
+loro, è il prodotto dei contributi delle singole osservazioni,
+\[
+    P(V \mid \bar{S}, R) = \prod_{t=1}^{T} P(v_t \mid s_t, R), \qquad
+    P(v_t \mid s_t, R) = P(\dot{x}_t, \dot{y}_t \mid s_t, R)\; P(x_t, y_t \mid s_t, R) ,
+\]
+dove il primo fattore valuta la velocità osservata rispetto a quelle registrate nello stato e il
+secondo la posizione. Il secondo fattore dell'equazione~\eqref{eq:meth_posterior} misura quanto è
+plausibile il passaggio da ciascuno stato al successivo ed è il prodotto delle probabilità di
+transizione,
+\[
+    P(\bar{S} \mid R) \;\propto\; \prod_{t=2}^{T} P(s_t \mid s_{t-1}, R) .
+\]
+L'ultimo fattore, $P(R)$, è la probabilità a priori della rotta.
+Pallotta et al.\ usano la stessa grandezza anche per l'anomaly detection: una traccia è considerata
+anomala quando il valore massimo di $P(V, \bar{S} \mid R)\,P(R)$ sulle rotte compatibili scende sotto
+una soglia, da fissare in base ai tassi di rilevamento e di falso allarme richiesti.
+
+Passando ai logaritmi, i prodotti diventano somme. Nella presente implementazione il punteggio di
+normalità di un trip di $n$ punti è
+\begin{equation}\label{eq:meth_score}
+    S \;=\; \underbrace{\frac{1}{n} \sum_{i=1}^{n} L_i}_{\text{osservazione}}
+    \;+\; \underbrace{\frac{1}{n-1} \sum_{t=2}^{n} \log P(s_t \mid s_{t-1}, R)}_{\text{transizione}}
+    \;+\; \underbrace{\log P(R)}_{\text{a priori}} ,
+\end{equation}
+i cui tre addendi sono detti rispettivamente \emph{termine di osservazione}, \emph{termine di
+transizione} e \emph{termine a priori}. Rispetto al logaritmo dell'equazione~\eqref{eq:meth_posterior},
+le somme sono sostituite da medie, così da rendere confrontabili trip di lunghezza diversa, e il termine
+di osservazione è calcolato in forma semplificata. Le sottosezioni seguenti descrivono i tre termini.
+
+\subsection{Decomposizione della velocità}
+
+Per ogni punto del dataset vengono calcolate le componenti cartesiane della velocità $V_x$ (verso est)
+e $V_y$ (verso nord), che corrispondono a $\dot{x}_t$ e $\dot{y}_t$, a partire da \texttt{SOG} e
+\texttt{COG}. Il COG, espresso in gradi rispetto al
 nord geografico (angolo \emph{bearing}), viene convertito in angolo aritmetico standard
 tramite la formula $\theta = (450 - \text{COG}) \mod 360$, e poi in radianti. Le componenti
 risultanti sono:
 \[
 V_x = \text{SOG} \cdot \cos(\theta), \qquad V_y = \text{SOG} \cdot \sin(\theta)
 \]
-Pallotta et al.\ \cite{pallotta} definiscono le stesse componenti in modo implicito, ponendo
-\texttt{SOG} pari al loro modulo e \texttt{COG} pari all'arcotangente del loro rapporto.
+Pallotta et al.\ \cite{pallotta} definiscono le stesse componenti in modo implicito, tramite le relazioni
+\[
+    \text{SOG}_t = \sqrt{\dot{x}_t^2 + \dot{y}_t^2}, \qquad
+    \text{COG}_t = \tan^{-1}\!\left(\frac{\dot{x}_t}{\dot{y}_t}\right) .
+\]
 Ricavare le componenti invertendo queste relazioni richiederebbe di gestire esplicitamente il
 quadrante della direzione, perché l'arcotangente è definita a meno di un'ambiguità di segno.
 Per questo motivo, nella presente implementazione $V_x$ e $V_y$ sono calcolate direttamente
 tramite seno e coseno dell'angolo $\theta$.
 
+\subsection{Termine di osservazione}\label{ssec:meth_kde}
 
-\subsection{Stima della densità tramite Kernel Density Estimation}\label{ssec:meth_kde}
- 
-Per modellare il comportamento normale di una rotta, viene stimata la distribuzione spaziale 
-dei punti tramite \emph{Kernel Density Estimation} (KDE) bivariata sui valori di latitudine e Longitudine 
-(\texttt{LON}, \texttt{LAT}), usando la funzione \texttt{scipy.stats.gaussian\_kde}. 
-Viene inoltre calcolata una seconda KDE, pesata per la magnitudine della velocità (\texttt{SOG}), 
-che cattura le zone dove le navi transitano tipicamente a velocità elevate. 
-Il prodotto punto per punto delle due KDE fornisce per ogni punto del dataset
-un valore di densità $p_i$ che combina informazione spaziale e cinematica.
-Si tratta di una versione semplificata dell'equazione~8 di~\cite{pallotta}, che moltiplica la
-probabilità della posizione per quella delle componenti della velocità, stimata sui soli punti
-vicini. Qui invece la seconda KDE è calcolata sull'intera rotta e dipende dal solo modulo della
-velocità, per cui la direzione del moto non entra nel termine di osservazione.
+Il termine di osservazione misura quanto i punti del trip si trovano nelle zone in cui passano
+abitualmente le navi della rotta. Per individuare queste zone si usa la \emph{Kernel Density Estimation}
+(KDE), una tecnica che ricava una densità di probabilità continua da un insieme di punti. Attorno a ogni
+punto osservato viene posta una piccola ``campana'' gaussiana, e la densità in una posizione è la somma
+dei contributi di tutte le campane. La densità risulta quindi alta dove i punti sono numerosi e vicini
+tra loro, bassa dove sono radi. La larghezza delle campane viene scelta automaticamente dalla libreria
+in base al numero e alla dispersione dei punti.
 
-Per passare dalla densità dei singoli punti a un termine di osservazione, si considera attorno a ogni
-punto $i$ della rotta un intorno di raggio $d = 500$~m, che corrisponde alla regione di stato
-dell'equazione~7 di~\cite{pallotta}. Questo è l'insieme $N_i$ dei punti della rotta la cui distanza da $i$,
-calcolata con la Great-Circle Distance, è inferiore a $d$. In figura~\ref{fig:regions_test} è
-riportato, in rosso, l'intorno di un punto della rotta selezionata scelto a caso. A ogni punto viene associata la somma dei
-logaritmi delle densità dei punti del suo intorno,
+Nella presente implementazione la KDE è bivariata e viene calcolata su longitudine e latitudine
+(\texttt{LON}, \texttt{LAT}) di tutti i punti della rotta, usando la funzione
+\texttt{scipy.stats.gaussian\_kde}. Viene inoltre calcolata una seconda KDE sulle stesse coordinate,
+in cui ogni punto pesa in proporzione alla propria velocità (\texttt{SOG}). Questa seconda densità è
+alta nelle zone in cui le navi transitano numerose e a velocità elevata.
+Il prodotto delle due KDE, valutato in ogni punto della rotta, fornisce la densità $p_i$ del punto,
+che combina informazione spaziale e cinematica.
+Si tratta di una versione semplificata del contributo $P(v_t \mid s_t, R)$ della
+Sezione~\ref{ssec:meth_model}, in cui le probabilità della posizione e delle componenti della velocità
+sono stimate sui soli punti della rotta che cadono nello stato $s_t$. Qui invece entrambe le KDE sono
+calcolate sull'intera rotta e la seconda dipende dal solo modulo della velocità, per cui la direzione
+del moto non entra nel termine di osservazione.
+
+Lo stato (o intorno) associato a un punto $i$ è l'insieme $N_i$ dei punti della rotta la cui distanza da $i$,
+calcolata con la Great-Circle Distance, è inferiore a $d = 500$~m. In figura~\ref{fig:regions_test} è
+riportato, in rosso, lo stato di un punto della rotta selezionata scelto a caso. A ogni punto viene
+associata la somma dei logaritmi delle densità dei punti del suo stato,
 \[
     L_i = \sum_{j \in N_i} \log p_j ,
 \]
 e il termine di osservazione di un trip è la media dei valori $L_i$ dei suoi punti. Questa
-formulazione si discosta da~\cite{pallotta}, dove l'intorno serve a stimare la probabilità del
-vettore osservato a partire dai soli punti vicini. Poiché le densità, espresse in deg$^{-4}$, sono
+formulazione si discosta da~\cite{pallotta}, dove lo stato serve a stimare le probabilità a partire
+dai soli punti vicini. Poiché le densità, espresse in deg$^{-4}$, sono
 in gran parte maggiori di 1, i loro logaritmi sono positivi e $L_i$ cresce con il numero di punti
-nell'intorno: il termine premia quindi i punti che si trovano nelle zone più frequentate della rotta.
+nello stato: il termine premia quindi i punti che si trovano nelle zone più frequentate della rotta.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{Methodology/regions_test.png}
-    \caption{Punti della rotta selezionata (in grigio) e intorno di raggio $d = 500$~m di un punto
+    \caption{Punti della rotta selezionata (in grigio) e stato di raggio $d = 500$~m di un punto
     scelto a caso (in rosso).}\label{fig:regions_test}
 \end{figure}
 
+\subsection{Termine di transizione}\label{ssec:meth_transition}
 
-\subsection{Calcolo della probabilità di transizione e anomaly scoring}
- 
-Il modello di anomaly detection si basa sulla probabilità di transizione tra stati successivi 
-di una traiettoria, modellata tramite una distribuzione di Weibull, seguendo l'equazione~14 di~\cite{pallotta}:
-\[
-p(\Delta p \mid \Delta t) = \exp\!\left[-{\left(\frac{\Delta p}{m \cdot \Delta t}\right)}^{\beta}\right]
-\]
-dove $\Delta t$ è l'intervallo di tempo e $\Delta p$ è la distanza tra la posizione effettiva
-e quella predetta. La predizione si ispira al Track Predictor (algoritmo~4 di~\cite{pallotta}),
+Il termine di transizione misura quanto è prevedibile il moto della nave da un punto al successivo.
+Per ogni coppia di punti consecutivi del trip, la posizione del secondo punto viene predetta a partire
+dal primo, e la distanza $\Delta p$ tra la posizione predetta e quella osservata misura l'errore di
+predizione (Figura~\ref{fig:transition_scheme}). Un errore piccolo indica che la nave si è mossa come
+previsto, un errore grande che ha cambiato velocità o direzione in modo inatteso.
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.85\textwidth]{Methodology/transition_scheme.png}
+    \caption[Schema dell'errore di predizione.]{Schema dell'errore di predizione. A partire dalla
+    posizione precedente (in blu) e dalla sua velocità si predice la posizione dopo un intervallo
+    $\Delta t$ (cerchio vuoto). La distanza $\Delta p$ dalla posizione osservata (in rosso) è l'errore
+    di predizione. Il cerchio tratteggiato è lo stato $s_t$ della posizione osservata.}\label{fig:transition_scheme}
+\end{figure}
+
+La predizione si ispira al Track Predictor (algoritmo~4 di~\cite{pallotta}),
 che propaga la posizione a piccoli passi usando la mediana delle velocità dei punti della rotta
 vicini alla posizione corrente. La presente implementazione è più semplice e stima la posizione
 futura ipotizzando che la nave proceda con la stessa direzione e la stessa velocità della
-propria ultima osservazione. Lo spostamento viene calcolato a partire dalle
-componenti della velocità $v_x = \mathrm{SOG}\cos\theta$ (verso est) e $v_y = \mathrm{SOG}\sin\theta$ (verso nord),
-dove $\theta = (450^\circ - \mathrm{COG}) \bmod 360^\circ$ è la rotta convertita in angolo aritmetico.
-Lo spostamento, espresso in miglia nautiche, viene convertito in gradi considerando che un miglio
+propria ultima osservazione. Lo spostamento viene calcolato a partire dalle componenti della velocità
+$V_x$ e $V_y$ ed è espresso in miglia nautiche. Viene poi convertito in gradi considerando che un miglio
 nautico corrisponde a $1/60$ di grado di latitudine, mentre in longitudine il valore va ulteriormente
 diviso per $\cos(\mathrm{lat})$.
 La distanza $\Delta p$, espressa in metri, è infine calcolata in maniera analoga a quanto descritto
 nella Sezione~\ref{ssec:meth_status}.
-I parametri $m$ e $\beta$ del modello sono stimati sull'intero insieme di trip disponibili.
-I parametri vengono stimati calcolando, per 11 lag temporali adattativi ed equidistanti
-(da un minimo pari al maggiore tra 30 s e un ventesimo della durata del trip più breve
-a un massimo pari al minore tra un quinto della durata mediana dei trip e un'ora), 
-le distribuzioni delle distanze $\Delta p$ e fittando su ciascuna una distribuzione di Weibull 
-tramite \texttt{scipy.stats.weibull\_min}. 
-Il parametro di scala $\alpha_k = m \cdot \Delta t$ viene stimato tramite regressione lineare 
-sull'insieme dei valori ottenuti ai diversi lag; il parametro di forma $\beta$ è preso come media dei valori stimati.
- 
-Ad ogni trip viene infine assegnato un punteggio di anomalia. La componente legata al moto è
-il logaritmo della probabilità della sequenza di stati, cioè la somma dei logaritmi delle
-probabilità di transizione lungo la traiettoria (equazione~9 di~\cite{pallotta}), divisa per
-il numero di transizioni. Questa normalizzazione, assente nell'originale, rende confrontabili
-trip di lunghezza diversa: senza di essa i trip più lunghi otterrebbero punteggi più bassi
-solo per il maggior numero di termini nella somma. Questa componente viene combinata con la
-log-probabilità di osservazione derivata dalla KDE (equazione~6) e con la probabilità a priori
-della rotta (equazione~4).
-Quest'ultima è stimata come il rapporto tra il numero di navi distinte che percorrono la rotta
-e il numero di navi distinte presenti nelle rotte analizzate. Questo denominatore si discosta
-da~\cite{pallotta}, dove la stessa grandezza è rapportata al numero totale di navi del dataset.
+
+Per trasformare l'errore in una probabilità, Pallotta et al.\ ricorrono alle distribuzioni di
+sopravvivenza, usate di solito per descrivere il tempo che precede un evento, osservando che la distanza
+dalla posizione attesa può essere trattata in modo analogo. Tra queste scelgono la distribuzione di
+Weibull, che si adatta bene alle distanze osservate su dati AIS reali. La probabilità di transizione è
+\begin{equation}\label{eq:meth_weibull}
+    P(s_t \mid s_{t-1}, R) = \exp\!\left[-{\left(\frac{\Delta p}{\alpha}\right)}^{\beta}\right] ,
+\end{equation}
+cioè la probabilità che l'errore di predizione sia almeno pari a $\Delta p$. Vale 1 per $\Delta p = 0$
+e decresce all'aumentare dell'errore, tanto più rapidamente quanto più piccolo è il parametro di scala
+$\alpha$. Il parametro di forma $\beta$ è assunto costante, mentre il parametro di scala cresce
+linearmente con l'intervallo di tempo $\Delta t$ tra le due osservazioni, $\alpha = m \cdot \Delta t$,
+perché più tempo passa tra due osservazioni, più grande è l'errore che ci si può attendere. Sostituendo
+nell'equazione~\eqref{eq:meth_weibull} si ottiene l'equazione~14 di~\cite{pallotta},
+\[
+    P(s_t \mid s_{t-1}, R) = \exp\!\left[-{\left(\frac{\Delta p}{m \cdot \Delta t}\right)}^{\beta}\right] .
+\]
+A parità di $\Delta t$ la probabilità diminuisce al crescere dell'errore $\Delta p$, mentre a parità di
+errore aumenta al crescere di $\Delta t$.
+
+I parametri $m$ e $\beta$ sono stimati sull'intero insieme dei trip della rotta, considerando diversi
+\emph{lag} temporali, cioè intervalli di tempo su cui viene misurato l'errore di predizione. Per ogni
+punto di un trip si cerca il punto dello stesso trip registrato circa un lag prima, si predice da questo
+la posizione del punto corrente e se ne misura l'errore $\Delta p$. Il punto precedente viene accettato
+solo se la sua distanza temporale dal punto corrente differisce dal lag di non più del 30--50\%, con
+una tolleranza maggiore per i lag più brevi. Pallotta et al.\ usano lag da 5 a 60 minuti, con passo
+di 5 minuti. Nella presente implementazione si usano invece 11 lag equidistanti adattati alla durata
+dei trip, con un minimo pari al maggiore tra 30~s e un ventesimo della durata del trip più breve e un
+massimo pari al minore tra un quinto della durata mediana dei trip e un'ora.
+Per ogni lag si ottiene così una distribuzione di distanze $\Delta p$, su cui viene stimata una
+distribuzione di Weibull tramite \texttt{scipy.stats.weibull\_min}. Il parametro $m$ è infine ottenuto
+con una regressione lineare dei parametri di scala stimati rispetto ai lag, mentre $\beta$ è la media
+dei parametri di forma. Sulla rotta selezionata i lag vanno da 252 a 1.679 secondi, mentre la maggior
+parte dei punti consecutivi è separata da intervalli più brevi; questo limite è discusso nella
+Sezione~\ref{sec:meth_limits}.
+
+Il termine di transizione di un trip è la media dei logaritmi delle probabilità di transizione tra
+punti consecutivi,
+\[
+    \frac{1}{n-1} \sum_{t=2}^{n} \log P(s_t \mid s_{t-1}, R)
+    \;=\; -\frac{1}{n-1} \sum_{t=2}^{n} {\left(\frac{\Delta p_t}{m \cdot \Delta t_t}\right)}^{\beta} ,
+\]
+calcolata direttamente in forma logaritmica, per evitare che le probabilità molto piccole vengano
+arrotondate a zero. La divisione per il numero di transizioni, assente nell'originale, rende
+confrontabili trip di lunghezza diversa: senza di essa i trip più lunghi otterrebbero punteggi più
+bassi solo per il maggior numero di termini nella somma.
+
+\subsection{Punteggio di normalità}\label{ssec:meth_score}
+
+Il punteggio di normalità di un trip è la somma dei tre termini
+dell'equazione~\eqref{eq:meth_score}. Il termine a priori è stimato come il rapporto tra il numero di
+navi distinte che percorrono la rotta e il numero di navi distinte presenti nelle rotte analizzate.
+Questo denominatore si discosta da~\cite{pallotta}, dove la stessa grandezza è rapportata al numero
+totale di navi del dataset.
 Poiché l'analisi è condotta su una sola rotta, numeratore e denominatore coincidono e la
 probabilità a priori risulta pari a 1 per tutti i trip. Con il denominatore di~\cite{pallotta}
 varrebbe invece 40/403, cioè circa 0,099. La scelta non influisce però sul ranking: il
 denominatore è lo stesso per tutte le rotte e per tutti i trip, quindi cambiarlo aggiunge
-la stessa costante al punteggio di ogni trip, che è una somma di logaritmi. Il termine viene comunque mantenuto
+la stessa costante al punteggio di ogni trip. Il termine viene comunque mantenuto
 nell'implementazione per consentire l'estensione dell'analisi a più rotte, nel qual caso
 assume valori diversi per ciascuna rotta.
-I trip con punteggio più basso sono classificati come potenzialmente anomali.
+
+I trip vengono infine ordinati per punteggio di normalità, e quelli con punteggio più basso sono
+i candidati anomali. La scelta della soglia che separa i trip normali da quelli anomali è descritta
+nella Sezione~\ref{ssec:res_metrics}.
 
 
 
@@ -586,6 +713,16 @@ del transponder~\cite{riassuntone}, fattori che, seppur non specificamente anali
 questa tesi, contribuiscono al divario tra il traffico realmente presente nell'area e
 quello effettivamente osservabile tramite AIS\@.
 
+Un ultimo limite riguarda la stima della distribuzione di Weibull. I parametri sono stimati su intervalli
+temporali compresi tra 252 e 1.679 secondi, mentre i dati sono campionati a un record al minuto e il 99,1\%
+delle transizioni tra punti consecutivi dei trip della rotta selezionata dura meno di 252 secondi.
+Il modello viene quindi applicato quasi sempre al di fuori dell'intervallo su cui è stato stimato.
+L'effetto sui risultati è trascurabile, perché il termine di transizione varia in un
+intervallo molto più piccolo del termine di osservazione e incide poco sul ranking
+(Sezione~\ref{sec:res_interpretation}). Una prova con parametri stimati su intervalli tra 60 e 300 secondi
+ha infatti lasciato invariati ranking e metriche. Una stima su intervalli coerenti con il campionamento dei
+dati resta comunque uno sviluppo possibile del metodo.
+
 
 \section{Sintesi e anticipazione dei risultati}\label{sec:meth_summary}
 
@@ -603,7 +740,7 @@ il calcolo del punteggio sull'intero trip anziché su una finestra temporale mob
 il termine di osservazione basato sull'intorno di 500 m e su una KDE pesata per il solo modulo della velocità;
 la predizione della posizione a partire dall'ultima osservazione della nave;
 il denominatore della probabilità a priori;
-l'introduzione della normalizzazione per lunghezza del trip nel calcolo del punteggio di anomalia, non presente nell'originale.
+l'introduzione della normalizzazione per lunghezza del trip nel calcolo del punteggio di normalità, non presente nell'originale.
 
 Il Capitolo~\ref{chap:results} presenta i risultati ottenuti: i waypoint identificati, 
 le rotte estratte, i parametri del modello Weibull stimati e il ranking di anomalia dei trip sulla rotta selezionata.

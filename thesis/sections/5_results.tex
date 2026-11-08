@@ -410,10 +410,10 @@ esplorate in sviluppi futuri del lavoro.
     temporali.}\label{fig:res_weibull_regression}
 \end{figure}
  
-\subsection{Anomaly scoring e ranking dei trip}\label{ssec:res_scoring}
+\subsection{Punteggio di normalità e ranking dei trip}\label{ssec:res_scoring}
  
-Applicando il modello ai 184 trip della rotta selezionata si ottiene un punteggio per ciascun
-trip. I punteggi vanno da 211,39 a 3.134,05; la media è pari a 1.994,39 e la deviazione standard
+Applicando il modello ai 184 trip della rotta selezionata si ottiene un punteggio di normalità per
+ciascun trip. I punteggi vanno da 211,39 a 3.134,05; la media è pari a 1.994,39 e la deviazione standard
 a 458,45. La Tabella~\ref{tab:res_score_ranking} riporta i dieci trip con punteggio più alto,
 cioè quelli che il modello giudica più regolari, e i dieci con punteggio più basso, che sono i candidati
 più probabili come anomalie. Il trip più anomalo è il 3372, con un punteggio nettamente inferiore a
@@ -444,23 +444,22 @@ quello del secondo trip della lista (211,39 contro 385,96 del trip 3413).
 \end{table}
 
 La Figura~\ref{fig:res_score_distribution} mostra la distribuzione dei punteggi sui 184 trip,
-con a sinistra la sola componente legata alla sequenza degli stati, cioè la log-probabilità delle
+con a sinistra il solo termine di transizione, cioè la log-probabilità delle
 transizioni normalizzata per il numero di transizioni del trip, e a destra il punteggio di
-anomalia complessivo. La componente della sequenza degli stati varia tra $-0{,}78$ e
+normalità complessivo. Il termine di transizione varia tra $-0{,}78$ e
 $-0{,}12$; un solo trip, in corrispondenza del valore minimo, è nettamente separato dagli
 altri. Il punteggio complessivo si concentra tra circa 1.500 e 2.500, con il massimo della
 distribuzione tra 2.000 e 2.250, e presenta una coda più lunga verso i valori bassi, in cui
-ricadono i trip candidati come anomalie. L'intervallo di variazione della componente della
-sequenza degli stati è più piccolo di oltre tre ordini di grandezza rispetto a quello del
-punteggio complessivo, per cui il ranking dei trip è determinato quasi interamente dalla
-log-probabilità di osservazione derivata dalla KDE.
+ricadono i trip candidati come anomalie. L'intervallo di variazione del termine di
+transizione è più piccolo di oltre tre ordini di grandezza rispetto a quello del
+punteggio complessivo, per cui il ranking dei trip è determinato quasi interamente dal
+termine di osservazione derivato dalla KDE.
 
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=\textwidth]{Results/score_distribution.png}
-    \caption{Distribuzione sui 184 trip della rotta selezionata della log-probabilità
-    normalizzata della sequenza di stati (a sinistra) e del punteggio di anomalia (a
-    destra).}\label{fig:res_score_distribution}
+    \caption{Distribuzione sui 184 trip della rotta selezionata del termine di transizione
+    (a sinistra) e del punteggio di normalità (a destra).}\label{fig:res_score_distribution}
 \end{figure}
 
 La Figura~\ref{fig:res_score_trips_map} mette a confronto sulla mappa i cinque trip con
@@ -567,7 +566,7 @@ della Tabella~\ref{tab:res_score_ranking}.
 \begin{figure}[htbp]
     \centering
     \includegraphics[width=0.6\textwidth]{Results/evaluation_roc.png}
-    \caption{Curve ROC del punteggio di anomalia considerando tutte le anomalie e le sole route
+    \caption{Curve ROC del punteggio di normalità considerando tutte le anomalie e le sole route
     deviation.}\label{fig:res_eval_roc}
 \end{figure}
 
@@ -592,8 +591,8 @@ due versi e un medoide che segue la linea del traghetto riportata sulla mappa di
 imbarcazioni che partono da un porto e vi ritornano.
 
 \paragraph{Peso dei termini del punteggio.} Sulla rotta selezionata il punteggio è determinato
-quasi interamente dal termine di osservazione derivato dalla KDE, perché la componente legata alla
-sequenza degli stati varia in un intervallo più piccolo di oltre tre ordini di grandezza
+quasi interamente dal termine di osservazione derivato dalla KDE, perché il termine di
+transizione varia in un intervallo più piccolo di oltre tre ordini di grandezza
 (Figura~\ref{fig:res_score_distribution}) e incide poco sul ranking. Il termine di
 osservazione è la media dei valori $L_i$ dei punti del trip, cioè della somma delle
 log-densità nell'intorno di ogni punto (Sezione~\ref{ssec:meth_kde}). Un trip ottiene quindi
