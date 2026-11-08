@@ -15,7 +15,7 @@ supervisionato e incrementale con una rappresentazione compatta del
 traffico, caratteristiche che lo rendono adatto all'analisi di dataset
 di grandi dimensioni. Il lavoro non si limita a una replica dell'algoritmo
 originale, ma ne valuta criticamente l'applicabilità a un contesto più
-moderno e voluminoso, identificando gli aspetti mantenuti, quelli adattati
+moderno, su un dataset reale di milioni di record, identificando gli aspetti mantenuti, quelli adattati
 e le eventuali possibilità di miglioramento.
 
 La pipeline implementata si articola in tre fasi principali:
@@ -27,24 +27,14 @@ probabilistico (KDE e distribuzione di Weibull).
 Le sezioni seguenti descrivono ciascuna fase nel dettaglio, a partire
 dalla descrizione del dataset utilizzato.
 
-\section{Obiettivi}\label{sec:meth_objectives}
-
-I quesiti di ricerca su cui è stata sviluppata la metodologia sono i seguenti:
-\begin{enumerate}
-    \item Il framework TREAD (che è stato sviluppato agli inizi degli anni 2010), è ancora applicabile ad un dataset
-          moderno e più voluminoso?
-    \item Quali aspetti e caratteristiche dell'algoritmo sono ``riciclabili'' e quali hanno richiesto adattamenti o sostituzioni?
-    \item È possibile ottenere risultati qualitativamente migliori?
-    \item Quali metriche è opportuno utilizzare per quantificare le prestazioni dell'algoritmo?
-\end{enumerate} 
-
 \section{Dataset}\label{sec:meth_dataset}
 
 I dati utilizzati provengono dal portale pubblico del NOAA\footnote{Il NOAA mette a disposizione due modalità di accesso ai dati: tramite il portale \url{https://marinecadastre.gov/accessais/}, che consente di filtrare per zona geografica e intervallo temporale, oppure tramite \url{https://hub.marinecadastre.gov/pages/vesseltraffic}, 
 che offre il download in bulk di tutti i dati AIS registrati suddivisi per anno.} (National Oceanic and Atmospheric Administration), un'agenzia scientifica e
-normativa statunitense con diversi compiti tra cui il monitoraggio oceanico~\cite{noaa_wiki}.
+normativa statunitense con diversi compiti tra cui il monitoraggio oceanico.
 I file scaricati dalla piattaforma hanno nome nel formato \texttt{AIS\_YYYY\_MM\_DD} (dove YYYY rappresenta l'anno, MM il mese e DD il giorno
 di registrazione dei dati) e contengono tutti i messaggi ricevuti dall'ente in una singola giornata di tutto il territorio nazionale monitorato.
+I messaggi originali sono campionati dall'ente a un record al minuto per nave~\cite{noaa_ais2019}.
 Per questa tesi sono stati utilizzati i dati relativi al periodo gennaio-marzo 2019 (estremi inclusi), filtrati
 sull'area delle Hawaii tramite una bounding box le cui estremità hanno le seguenti coordinate:
 \begin{itemize}
@@ -82,7 +72,7 @@ un messaggio e l'altro, e attributi dinamici, che riflettono lo stato corrente d
 \texttt{VesselType}    & intero   & Codice numerico che indica la tipologia di nave (cargo, tanker, passeggeri, ecc.) \\
 \texttt{Length}        & intero   & Lunghezza della nave in metri \\
 \texttt{Width}         & intero   & Larghezza della nave in metri \\
-\texttt{Draft}         & decimale & Pescaggio della nave in decimi di metro \\
+\texttt{Draft}         & decimale & Pescaggio della nave in metri \\
 \texttt{Cargo}         & intero   & Codice del tipo di carico trasportato \\
 \texttt{TransceiverClass} & booleano & Classe del transponder AIS:\ \texttt{A} o \texttt{B} (imbarcazioni minori) \\
 \midrule
@@ -290,7 +280,8 @@ Nella seconda fase, le rotte apprese vengono utilizzate per classificare nuove t
 
 La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il processo non è incrementale in senso stretto:
 anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
-e processato in batch. Questa scelta è stata motivata dai vincoli hardware descritti nella sezione~\ref{sec:meth_limits}.
+e processato in batch. L'analisi è condotta a posteriori su un periodo già concluso, per cui l'aggiornamento continuo del modello non è necessario;
+inoltre l'elaborazione messaggio per messaggio sarebbe stata troppo onerosa per l'hardware disponibile.
 
 
 \subsection{Identificazione dei waypoint: DBSCAN e H-DBSCAN}\label{ssec:meth_clustering}
@@ -400,7 +391,7 @@ un'etichetta secondo la seguente logica:
     \item se il punto si trova all'interno di un waypoint significativo, l'etichetta
           corrisponde al nome di quel waypoint;
     \item se il punto si trova in navigazione tra due waypoint, l'etichetta assume il
-          formato \texttt{WP\_X --- WP\_Y}, dove \texttt{WP\_X} e \texttt{WP\_Y} sono
+          formato \texttt{WP\_X - WP\_Y}, dove \texttt{WP\_X} e \texttt{WP\_Y} sono
           rispettivamente il waypoint di provenienza e quello di destinazione; nei casi
           in cui uno o entrambi non siano identificabili, viene utilizzato il
           segnaposto \texttt{<NA>}.
@@ -437,18 +428,12 @@ risultanti sono:
 \[
 V_x = \text{SOG} \cdot \cos(\theta), \qquad V_y = \text{SOG} \cdot \sin(\theta)
 \]
-Pallotta et al.\ \cite{pallotta} propongono un approccio alternativo per il calcolo
-delle stesse componenti, basato sulla funzione arcotangente e sul teorema di Pitagora.
-Questo approccio presenta alcune criticità. In primo luogo, la funzione arcotangente è
-definita a meno di un'ambiguità di segno: per ricavare il quadrante corretto della
-direzione è necessario gestire esplicitamente i casi in cui $V_x$ e $V_y$ assumono segno
-negativo, introducendo logica condizionale aggiuntiva. In secondo luogo, l'uso combinato
-di arcotangente e radice quadrata è computazionalmente più oneroso rispetto al calcolo
-diretto tramite seno e coseno. Infine, l'approccio inverso introduce potenziali errori
-numerici nelle situazioni limite, come velocità molto prossime a zero, in cui il rapporto
-tra le componenti diventa instabile. Per questi motivi, nella presente implementazione si
-è preferito calcolare $V_x$ e $V_y$ direttamente tramite seno e coseno dell'angolo
-$\theta$, ottenendo un codice più semplice ed efficiente.
+Pallotta et al.\ \cite{pallotta} definiscono le stesse componenti in modo implicito, ponendo
+\texttt{SOG} pari al loro modulo e \texttt{COG} pari all'arcotangente del loro rapporto.
+Ricavare le componenti invertendo queste relazioni richiederebbe di gestire esplicitamente il
+quadrante della direzione, perché l'arcotangente è definita a meno di un'ambiguità di segno.
+Per questo motivo, nella presente implementazione $V_x$ e $V_y$ sono calcolate direttamente
+tramite seno e coseno dell'angolo $\theta$.
 
 
 \subsection{Stima della densità tramite Kernel Density Estimation}\label{ssec:meth_kde}
@@ -458,8 +443,12 @@ dei punti tramite \emph{Kernel Density Estimation} (KDE) bivariata sui valori di
 (\texttt{LON}, \texttt{LAT}), usando la funzione \texttt{scipy.stats.gaussian\_kde}. 
 Viene inoltre calcolata una seconda KDE, pesata per la magnitudine della velocità (\texttt{SOG}), 
 che cattura le zone dove le navi transitano tipicamente a velocità elevate. 
-Il prodotto punto per punto delle due KDE (equazione~8 di~\cite{pallotta}) fornisce per ogni punto del dataset 
+Il prodotto punto per punto delle due KDE fornisce per ogni punto del dataset
 un valore di densità $p_i$ che combina informazione spaziale e cinematica.
+Si tratta di una versione semplificata dell'equazione~8 di~\cite{pallotta}, che moltiplica la
+probabilità della posizione per quella delle componenti della velocità, stimata sui soli punti
+vicini. Qui invece la seconda KDE è calcolata sull'intera rotta e dipende dal solo modulo della
+velocità, per cui la direzione del moto non entra nel termine di osservazione.
 
 Per passare dalla densità dei singoli punti a un termine di osservazione, si considera attorno a ogni
 punto $i$ della rotta un intorno di raggio $d = 500$~m, che corrisponde alla regione di stato
@@ -484,15 +473,6 @@ nell'intorno: il termine premia quindi i punti che si trovano nelle zone più fr
 \end{figure}
 
 
-\subsection{Classificazione dei trip per lunghezza}
- 
-I trip associati alla rotta selezionata vengono ordinati per lunghezza (numero di punti) in ordine crescente. 
-Questo ordinamento riflette l'assunzione secondo cui i trip più corti sono maggiormente rappresentativi del 
-comportamento normale, mentre i trip più lunghi o devianti hanno una maggiore probabilità di essere anomali; 
-tale assunzione guida l'interpretazione del ranking di anomalia descritto nella sezione successiva, ma 
-l'intero insieme dei trip disponibili viene utilizzato sia per la stima dei parametri del modello sia per 
-il calcolo dello score di anomalia.
- 
 \subsection{Calcolo della probabilità di transizione e anomaly scoring}
  
 Il modello di anomaly detection si basa sulla probabilità di transizione tra stati successivi 
@@ -501,9 +481,11 @@ di una traiettoria, modellata tramite una distribuzione di Weibull, seguendo l'e
 p(\Delta p \mid \Delta t) = \exp\!\left[-{\left(\frac{\Delta p}{m \cdot \Delta t}\right)}^{\beta}\right]
 \]
 dove $\Delta t$ è l'intervallo di tempo e $\Delta p$ è la distanza tra la posizione effettiva
-e quella predetta tramite il Track Predictor (algoritmo~4 di~\cite{pallotta}).
-Quest'ultimo stima la posizione futura ipotizzando che la nave proceda con la stessa direzione
-e la stessa velocità dell'ultima osservazione. Lo spostamento viene calcolato a partire dalle
+e quella predetta. La predizione si ispira al Track Predictor (algoritmo~4 di~\cite{pallotta}),
+che propaga la posizione a piccoli passi usando la mediana delle velocità dei punti della rotta
+vicini alla posizione corrente. La presente implementazione è più semplice e stima la posizione
+futura ipotizzando che la nave proceda con la stessa direzione e la stessa velocità della
+propria ultima osservazione. Lo spostamento viene calcolato a partire dalle
 componenti della velocità $v_x = \mathrm{SOG}\cos\theta$ (verso est) e $v_y = \mathrm{SOG}\sin\theta$ (verso nord),
 dove $\theta = (450^\circ - \mathrm{COG}) \bmod 360^\circ$ è la rotta convertita in angolo aritmetico.
 Lo spostamento, espresso in miglia nautiche, viene convertito in gradi considerando che un miglio
@@ -554,7 +536,7 @@ Le librerie principali utilizzate sono:
     \item \textbf{Pandas}: per la manipolazione del dataset nelle fasi successive all'importazione;
     \item \textbf{NumPy}: per i calcoli vettoriali e le operazioni sulle serie temporali;
     \item \textbf{scikit-learn}: per l'implementazione di DBSCAN\@;
-    \item \textbf{hdbscan}: libreria per H-DBSCAN, scelta per le sue prestazioni superiori rispetto all'implementazione scikit-learn nella gestione di cluster di densità variabile;
+    \item \textbf{hdbscan}: per l'implementazione di H-DBSCAN;
     \item \textbf{SciPy}: per il calcolo dei convex hull, la Kernel Density Estimation e il fitting della distribuzione di Weibull;
     \item \textbf{Shapely}: per le operazioni geometriche sui poligoni waypoint;
     \item \textbf{GeoPandas}: per la visualizzazione rapida dei poligoni waypoint per verifiche qualitative;
@@ -580,11 +562,11 @@ Un secondo limite è di natura computazionale: l'implementazione scikit-learn di
 un costo in memoria $O(n^2)$ rispetto al numero di punti in input (si veda il
 Paragrafo~\ref{ssec:meth_clustering} per i dettagli). La RAM disponibile sulla macchina
 utilizzata non era sufficiente per eseguire l'algoritmo direttamente sui punti grezzi del
-dataset, rendendo necessaria una fase di pre-aggregazione per coordinate GPS e, per
-H-DBSCAN, un'ulteriore espansione della tabella dei pesi. Questo livello aggiuntivo di
-elaborazione non comporta una perdita di informazione sul dataset nel suo complesso ma
-rappresenta comunque un vincolo imposto dall'hardware, che con risorse maggiori non
-sarebbe stato necessario.
+dataset, rendendo necessaria una fase di pre-aggregazione per coordinate GPS. Questa fase è un vincolo
+imposto dall'hardware, che con risorse maggiori non sarebbe stato necessario, e comporta una
+perdita di informazione contenuta, perché le coordinate vengono arrotondate e i punti con le
+stesse coordinate vengono fusi in un'unica riga con un peso. L'espansione della tabella dei pesi
+usata per H-DBSCAN dipende invece dalla libreria \texttt{hdbscan}, che non supporta i pesi.
 
 Un ulteriore limite, intrinseco alla tecnologia AIS stessa e già discusso nel
 Capitolo~\ref{chap:literature}, riguarda la natura dei dati alla fonte. Il sistema AIS
@@ -592,10 +574,11 @@ traccia esclusivamente le imbarcazioni che montano e utilizzano attivamente il
 transponder: l'obbligo di installazione, imposto dalla convenzione SOLAS, si applica
 infatti solo alle navi con stazza lorda superiore a una certa soglia e alle navi passeggeri~\cite{imo2004}. 
 Il naviglio minore (imbarcazioni da diporto, pescherecci di piccole dimensioni, mezzi non commerciali) 
-non è quindi soggetto a tale obbligo e risulta nella maggior parte dei casi del tutto assente dal
-dataset. Ne consegue che il modello di traffico appreso descrive esclusivamente il
-comportamento delle imbarcazioni di maggiori dimensioni, mentre eventuali pattern di
-traffico generati dal naviglio minore restano completamente invisibili.
+non è quindi soggetto a tale obbligo ed è presente nel dataset solo in parte, quando è comunque
+dotato di un transponder, in genere di Classe B. Nel dataset analizzato i dispositivi di Classe B
+generano il 35,4\% dei record e riguardano 190 navi su 403. Ne consegue che il modello di traffico
+appreso descrive solo le imbarcazioni dotate di transponder, mentre i pattern di traffico di
+quelle che ne sono prive restano invisibili.
 A questo si aggiungono i limiti di qualità del dato già discussi nel
 Capitolo~\ref{chap:literature}, quali le lacune di copertura dei ricevitori terrestri e
 la possibilità di manipolazione dei messaggi tramite spoofing o spegnimento volontario
@@ -615,7 +598,11 @@ e infine una fase di anomaly detection basata su KDE e distribuzione di Weibull.
 
 Le principali differenze rispetto all'algoritmo originale sono: l'adozione di H-DBSCAN al posto di DBSCAN incrementale, 
 motivata dalla necessità di gestire cluster a densità variabile; 
-l'approccio batch in luogo di quello incrementale, imposto dai vincoli hardware; 
+l'approccio batch in luogo di quello incrementale, adatto a un'analisi a posteriori e più sostenibile con l'hardware disponibile;
+il calcolo del punteggio sull'intero trip anziché su una finestra temporale mobile;
+il termine di osservazione basato sull'intorno di 500 m e su una KDE pesata per il solo modulo della velocità;
+la predizione della posizione a partire dall'ultima osservazione della nave;
+il denominatore della probabilità a priori;
 l'introduzione della normalizzazione per lunghezza del trip nel calcolo del punteggio di anomalia, non presente nell'originale.
 
 Il Capitolo~\ref{chap:results} presenta i risultati ottenuti: i waypoint identificati, 

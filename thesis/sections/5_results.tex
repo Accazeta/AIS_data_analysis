@@ -615,8 +615,9 @@ e di falso allarme richiesti.
 riguardano la zona dei porti. Davanti ai porti le navi rallentano e i punti si addensano, per
 cui $L_i$ assume i valori più alti della rotta (Figura~\ref{fig:res_log_kde_map}). Un trip che
 compie manovre lente nella zona di avvicinamento al porto accumula molti punti con $L_i$
-elevato e ottiene un punteggio alto anziché basso. Quattro anomalie compaiono infatti tra i
-dieci trip con punteggio più alto (Tabella~\ref{tab:res_score_ranking}), e per questo la curva
+elevato e ottiene un punteggio alto anziché basso. Tra i dieci trip con punteggio più alto (Tabella~\ref{tab:res_score_ranking}) compaiono infatti
+quattro anomalie. Tre sono manovre nella zona di avvicinamento al porto (i trip 8857, 8374 e 25609),
+mentre la quarta (il trip 23474) termina il viaggio fuori dal porto. Per questo la curva
 ROC che considera tutte le anomalie scende sotto la diagonale. Per lo stesso motivo non vengono
 rilevate le route deviation che avvengono vicino al porto, come i trip 25652, 23889 e 10583. I trip che terminano il viaggio
 fuori dal porto, infine, seguono il corridoio per la maggior parte del percorso e, poiché il
@@ -632,12 +633,14 @@ nave che compie una doppia inversione di rotta davanti al porto di Livorno, senz
 rilevamento. Esistono inoltre alcune differenze di impostazione. In~\cite{pallotta} l'anomaly
 detection è eseguita online, su una finestra temporale mobile che considera solo i punti più
 recenti della traccia, mentre in questo lavoro il punteggio è calcolato a posteriori sull'intero
-trip. Anche il termine di osservazione basato sull'intorno di 500 m e la probabilità a priori
-della rotta sono calcolati in modo diverso, come descritto nel
+trip. Anche il termine di osservazione basato sull'intorno di 500 m, la predizione della posizione e la
+probabilità a priori della rotta sono calcolati in modo diverso, come descritto nel
 Capitolo~\ref{chap:methodology}. Il comportamento
 nelle zone portuali è in parte una conseguenza di queste scelte. Una finestra mobile, infatti,
 potrebbe rendere visibili anche le anomalie localizzate in un breve tratto del trip, che la
-media sull'intero trip tende ad attenuare.
+media sull'intero trip tende ad attenuare. Inoltre la direzione del moto non entra nel termine
+di osservazione, che domina il punteggio, mentre nell'esempio di Livorno è proprio l'incompatibilità
+di direzione e velocità a far crollare la probabilità.
 
 % ─────────────────────────────────────────────
 \section{Sintesi}\label{sec:res_summary}
