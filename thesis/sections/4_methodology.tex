@@ -300,7 +300,7 @@ Per questo motivo, anziché cercare punti di velocità nulla, si è deciso di in
 I waypoint non hanno dimensione fissa: ciascuno occupa una porzione dello spazio geografico 
 determinata da come si distribuiscono e da quanti sono i punti che lo compongono. Nella pratica, la maggior parte di essi 
 tende ad occupare una porzione molto ridotta dell'area di studio.
-Nell'algoritmo originale l'identificazione dei waypoint viene effettuata tramite un approccio basato su DBSCAN.\
+Nell'algoritmo originale l'identificazione dei waypoint viene effettuata tramite un approccio basato su DBSCAN~\cite{ester1996}.\
 La presente implementazione applica prima DBSCAN e poi H-DBSCAN come variante
 migliorativa (\emph{Hierarchical DBSCAN}).
 
@@ -341,7 +341,7 @@ Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferi
  
 \rev{H-DBSCAN è stato proposto da Campello et al.~\cite{campello2013} come estensione gerarchica di DBSCAN.}
 Il motivo principale per introdurre H-DBSCAN è la sua capacità di identificare cluster di densità variabile, cosa che DBSCAN non 
-riesce a gestire bene. %~\cite{schubert2017}. 
+riesce a gestire bene. 
 Il traffico nelle Hawaii presenta una densità fortemente eterogenea: i porti principali come Honolulu hanno concentrazioni 
 di punti molto più elevate rispetto a zone di passaggio o porti minori. 
 In questo contesto, i parametri fissi di DBSCAN tendono a sovra-segmentare le aree sparse o a fondere artificialmente cluster distinti 
