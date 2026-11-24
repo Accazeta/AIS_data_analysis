@@ -1,23 +1,161 @@
-% sections/conclusions.tex
+% sections/6_conclusions.tex
 \chapter{Conclusioni}
 \label{chap:conclusions}
 
-Conclusioni, in cui indico in che modo il mio lavoro ha portato delle migliorie
-ed eventualmente quali aspetti possono/devono essere ancora esplorati/approfonditi
+Questo capitolo riassume il lavoro svolto e risponde ai quesiti di ricerca posti nella
+Sezione~\ref{sec:intro_questions}. Discute poi i limiti emersi e i possibili sviluppi futuri.
 
-\section{Sezione 1 - Sintesi dei contributi principali}
-Testo Sezione 1
+% ---------------------------------------------------------------------------------------------
+\section[Sintesi del lavoro]{Sintesi del lavoro}\label{sec:concl_summary}
 
-\section{Sezione 2 - Migliorie ottenute}
-Testo sezione 2
+La tesi ha re-implementato in Python il framework TREAD di Pallotta et al.~\cite{pallotta} e lo ha
+applicato ai messaggi AIS pubblicati dal NOAA per l'arcipelago delle Hawaii nel primo trimestre del
+2019. La pipeline si articola in tre fasi:
+\begin{itemize}
+    \item il pre-processing, il cui compito è quello di pulire i dati e classificare gli stati delle navi;
+    \item la fase di Knowledge Discovery, che estrae senza supervisione i waypoint, tramite H-DBSCAN, e le rotte che li collegano;
+    \item la fase di anomaly detection, che assegna a ogni trip di una rotta un punteggio di normalità, costruito come log-probabilità a partire da due KDE e da una distribuzione di Weibull.
+\end{itemize}
 
-\section{Sezione 3 - Limititazioni/difetti}
-Testo sezione 3
+Il metodo è stato valutato sulla rotta dal porto di Honolulu al porto di Kalaeloa, sull'isola di
+Oahu, confrontando il ranking dei 184 trip con un'etichettatura manuale usata esclusivamente come
+riferimento per il calcolo delle metriche.
 
-\section{Sezione 4 - Sviluppi futuri}
-Testo Sezione 4
-% DA INCLUDERE: esplorare relazioni alternative (non lineari) tra parametro di scala della
-% Weibull e intervallo temporale: la retta alpha = m * Delta t fitta i dati solo in modo
-% approssimativo (vedi Sezione "Parametri del modello Weibull" nei risultati).
+% ---------------------------------------------------------------------------------------------
+\section[Risposte ai quesiti di ricerca]{Risposte ai quesiti di ricerca}\label{sec:concl_questions}
 
-\section{Sezione 5 - Conclusione finale}
+\subsection[Applicabilità del framework a un dataset reale]{Applicabilità del framework a un dataset reale}
+
+Il primo quesito chiedeva se TREAD, sviluppato agli inizi degli anni 2010, sia ancora applicabile
+con gli strumenti attuali a un dataset AIS reale di milioni di record. La risposta è positiva,
+a condizione di alcuni adattamenti. La pipeline ha elaborato 5.462.415 record, ridotti a 5.415.129
+dopo la pulizia, su un computer personale e senza infrastrutture dedicate.
+
+Gli adattamenti hanno riguardato soprattutto la gestione della memoria. L'elaborazione avviene in
+modalità batch, a posteriori sull'intero dataset, invece che messaggio per messaggio come
+nell'algoritmo originale. Prima del clustering le coordinate dei punti stazionari vengono
+arrotondate e aggregate, con un peso logaritmico che tiene conto di quante volte ogni posizione
+compare nel dataset. Senza questa aggregazione i circa 3.770.000 punti stazionari non sarebbero
+stati gestibili con la memoria disponibile. L'importazione dei file giornalieri in parallelo con
+Polars e l'uso in Pandas di tipi di dato compatti, scelti in base alla codifica dei messaggi AIS,
+hanno contribuito a contenere l'occupazione di memoria. La sola conversione dei tipi riduce quella
+del dataset di circa il 34\%.
+
+Con questi adattamenti il framework produce risultati coerenti con la realtà. I 144 waypoint
+estratti comprendono i principali porti dell'arcipelago, le 766 rotte riflettono servizi reali come
+il collegamento tra Lahaina e l'isola di Lanai, e sulla rotta selezionata il punteggio di normalità
+individua come più anomali trip che deviano in modo evidente dal corridoio.
+
+\subsection[Aspetti riutilizzati e aspetti adattati]{Aspetti riutilizzati e aspetti adattati}
+
+Il secondo quesito chiedeva quali aspetti dell'algoritmo siano riutilizzabili e quali abbiano
+richiesto adattamenti o sostituzioni. Dell'impianto originale sono stati mantenuti la suddivisione
+in Knowledge Discovery e anomaly detection, la rappresentazione del traffico tramite navi,
+waypoint e rotte, la classificazione degli stati delle navi e la struttura del modello
+probabilistico. Il punteggio di normalità combina infatti, come in Pallotta et al., un termine di
+osservazione, un termine di transizione basato sulla distribuzione di Weibull e la probabilità
+a priori della rotta.
+
+Hanno invece richiesto adattamenti o sostituzioni
+\begin{itemize}
+    \item l'elaborazione, passata da incrementale a batch per i limiti dell'hardware disponibile;
+    \item il clustering dei waypoint, eseguito con H-DBSCAN invece che con DBSCAN incrementale;
+    \item il termine di osservazione, calcolato su un intorno di 500~m di ogni punto con due KDE stimate una sola volta sull'intera rotta e senza la direzione del moto;
+    \item il termine di transizione, con una predizione della posizione semplificata e intervalli temporali scelti in modo adattivo in base alla durata dei trip;
+    \item il denominatore della probabilità a priori, riferito alle sole navi della rotta analizzata;
+    \item l'unità di valutazione, che è l'intero trip invece di una finestra temporale mobile.
+\end{itemize}
+Le singole differenze sono descritte e motivate nelle Sezioni~\ref{sec:meth_algorithm}
+e~\ref{sec:meth_anomaly}.
+
+\subsection[Passaggi migliorati con gli strumenti attuali]{Passaggi migliorati con gli strumenti attuali}
+
+Il terzo quesito chiedeva quali passaggi del metodo originale possano essere migliorati con gli
+strumenti attuali. Il lavoro ne ha individuati due.
+
+Il primo è l'identificazione dei waypoint. H-DBSCAN è stato pubblicato nel 2013~\cite{campello2013}, lo stesso
+anno del lavoro di Pallotta et al., che è il risultato di un'attività svolta probabilmente negli anni precedenti.
+È quindi difficile che gli autori potessero conoscerlo e adottarlo. A differenza di DBSCAN,
+H-DBSCAN non usa un raggio fisso ma si adatta alla densità locale dei punti. Nelle
+Hawaii, dove i porti principali come Honolulu hanno una concentrazione di punti molto più alta dei
+porti minori e delle zone di passaggio, questa caratteristica permette di separare aree vicine nelle
+zone dense senza frammentare quelle sparse, come mostrano le figure della
+Sezione~\ref{sec:res_qualitative}. Il miglioramento è osservato sulle mappe e non è stato misurato
+con un indice quantitativo.
+
+Il secondo è il calcolo delle componenti della velocità. Pallotta et al.~le definiscono in modo
+implicito, tramite relazioni da cui andrebbero ricavate gestendo l'ambiguità di quadrante
+dell'arcotangente. In questo lavoro sono calcolate direttamente da \texttt{SOG} e \texttt{COG}
+con seno e coseno, in modo più semplice e senza ambiguità.
+
+Un altro passaggio, il calcolo del punteggio nelle zone portuali, si è invece rivelato il
+principale limite del metodo. È discusso nella Sezione~\ref{sec:concl_limits}, mentre i
+possibili interventi sono proposti nella Sezione~\ref{sec:concl_future}.
+
+\subsection[Metriche per la valutazione delle prestazioni]{Metriche per la valutazione delle prestazioni}
+
+Il quarto quesito chiedeva quali metriche siano adatte a quantificare le prestazioni
+dell'algoritmo. Poiché il metodo non è supervisionato e i dati AIS non contengono un'indicazione
+delle anomalie, il primo passo è costruire un riferimento. In questo lavoro i 184 trip della rotta
+selezionata sono stati etichettati a mano in tre classi, cioè normali, route deviation e altre
+anomalie. La valutazione è stata condotta in due casi, considerando tutte le anomalie (caso a) e le
+sole route deviation (caso b), per distinguere il tipo di anomalia per cui il metodo è pensato
+dalle altre.
+
+Sono stati scelti poi due tipi di metriche:
+\begin{itemize}
+    \item Le metriche che dipendono da una soglia, cioè la matrice di confusione e i valori 
+    di precision (quota dei trip segnalati che sono davvero anomali), di recall (quota delle
+    anomalie rilevate) e di F1 che ne derivano, descrivono il comportamento
+    del metodo con la soglia effettivamente usata (in questo caso la soglia è stata fissata 
+    con la regola di Tukey senza ricorrere alle etichette). 
+    Con questa soglia la precision è pari a 1 in entrambi i casi, quindi nessun trip normale viene segnalato come anomalo.
+    La recall è pari a 0,220 nel caso (a) e a 0,429 nel caso (b), e la F1 vale rispettivamente 0,360 e 0,600. L'accuracy è pari a 0,826 e 0,927 ma è poco indicativa, perché i trip normali sono la grande maggioranza.
+    \item Le metriche indipendenti dalla soglia, cioè la curva ROC e l'area sotto la curva (AUC), valutano invece la capacità del punteggio di ordinare i trip, a prescindere dalla soglia scelta. L'AUC vale 0,751 nel caso (a) e 0,844 nel caso (b).
+\end{itemize}
+Il confronto tra le due famiglie di metriche è informativo. Una recall bassa insieme a un'AUC alta indica che il punteggio ordina bene i trip ma la soglia di Tukey è troppo severa, mentre la differenza tra i due casi mostra che il metodo rileva le route deviation molto meglio delle altre anomalie.
+
+% ---------------------------------------------------------------------------------------------
+\section[Limiti]{Limiti}\label{sec:concl_limits}
+
+Ai limiti della metodologia già discussi nella Sezione~\ref{sec:meth_limits} se ne aggiungono altri
+emersi dai risultati.
+
+Il limite principale riguarda le zone portuali. Davanti ai porti le navi rallentano e i punti si
+addensano, per cui il termine di osservazione assume i valori più alti della rotta. Le manovre lente
+nella zona di avvicinamento al porto e le deviazioni che avvengono vicino al porto ottengono
+quindi punteggi alti anziché bassi, e quattro anomalie compaiono tra i dieci trip più regolari del
+ranking.
+
+Un secondo limite deriva dal calcolo del punteggio come media sull'intero trip. Un'anomalia limitata
+a un breve tratto, come l'arrivo in un punto diverso dal porto abituale, pesa poco sul risultato.
+Per questo motivo nessuno dei 15 trip che terminano il viaggio fuori dal porto di arrivo viene
+segnalato come anomalo.
+
+La valutazione, infine, è limitata a una sola rotta e a tre mesi di dati, e si basa su
+un'etichettatura svolta da un solo annotatore. Un'etichettatura con più annotatori renderebbe la valutazione più solida. I risultati quantitativi vanno quindi letti come
+indicativi del comportamento del metodo su una rotta molto regolare, e non come prestazioni
+generalizzabili ad altre rotte o ad altre aree.
+
+% ---------------------------------------------------------------------------------------------
+\section[Sviluppi futuri]{Sviluppi futuri}\label{sec:concl_future}
+
+I risultati e i limiti emersi suggeriscono alcuni possibili sviluppi.
+\begin{itemize}
+    \item \textbf{Parametro di scala.} La retta $\alpha = m \cdot \Delta t$ descrive solo in modo approssimativo i parametri di scala della Weibull stimati sui diversi intervalli (Figura~\ref{fig:res_weibull_regression}). Si potrebbero esplorare relazioni non lineari e stimare i parametri su intervalli temporali coerenti con il campionamento dei dati.
+    \item \textbf{Zone portuali.} Per ridurre il vantaggio che l'addensamento dei punti davanti ai porti dà al punteggio si potrebbero, per esempio, stimare modelli separati per le zone portuali e per il resto della rotta.
+    \item \textbf{Direzione del moto.} Introdurre la direzione nella KDE, come nel modello originale, permetterebbe di riconoscere i trip che attraversano zone frequentate ma con una direzione incompatibile con quella abituale, come nell'esempio della doppia inversione di rotta riportato da Pallotta et al.
+    \item \textbf{Generalizzazione.} Applicare il metodo ad altre rotte, come quella tra Lahaina e l'isola di Lanai, ad altre aree e a periodi più lunghi permetterebbe di verificare se i risultati ottenuti valgono anche in altri contesti.
+    \item \textbf{Versione online.} Riportare la pipeline al funzionamento incrementale del framework originale, aggiornando il modello e i punteggi all'arrivo di ogni messaggio, renderebbe il metodo utilizzabile per il monitoraggio in tempo reale.
+\end{itemize}
+
+% ---------------------------------------------------------------------------------------------
+\clearpage
+\section[Considerazioni finali]{Considerazioni finali}\label{sec:concl_final}
+
+Il lavoro ha mostrato che il framework TREAD, a più di dieci anni dalla sua pubblicazione, resta una
+base valida per l'analisi del traffico marittimo. Con gli strumenti attuali e alcuni adattamenti
+estrae in modo automatico una rappresentazione del traffico coerente con la realtà e permette di
+individuare le deviazioni dalle rotte abituali senza falsi allarmi sulla rotta analizzata. La
+valutazione quantitativa ne ha messo in luce anche i limiti, in particolare nelle zone portuali, e
+indica le direzioni in cui il metodo può essere ulteriormente migliorato.

@@ -18,11 +18,11 @@ La sua origine viene generalmente attribuita a Benny Pettersson, che sviluppò u
 ’90. Inizialmente venne concepito per ridurre il rischio di collisioni in mare in condizioni di scarsa visibilità;
 l'efficacia di tale strumento e il riconoscimento formale da parte dell'International Maritime Organization (IMO) hanno 
 fatto si che tale sistema venisse progressivamente adottato a livello internazionale.
-Nell’ambito dell’accordo SOLAS, l’installazione dell’AIS è diventata obbligatoria per le navi con 
+Nell’ambito dell’accordo SOLAS (International Convention for the Safety of Life at Sea), l’installazione dell’AIS è diventata obbligatoria per le navi con 
 stazza lorda superiore a 300 tonnellate impegnate in viaggi internazionali e per tutte le navi passeggeri 
 \cite{imo2004}.
 
-Dal punto di vista tecnico, l’AIS opera su due canali radio VHF intorno ai 162 MHz 
+Dal punto di vista tecnico, l’AIS opera su due canali radio VHF (Very High Frequency) intorno ai 162 MHz 
 e utilizza il protocollo TDMA (Time-Division Multiple Access), 
 che consente a più imbarcazioni di trasmettere senza interferire tra loro \cite{riassuntone}. 
 La copertura, in condizioni standard, arriva fino a circa 50 km (linea di vista), 
@@ -35,7 +35,7 @@ mentre l’integrazione di un collegamento via satellite (S-AIS) consente di est
 I messaggi AIS possono essere suddivisi in tre categorie principali \cite{riassuntone}:
 
 \begin{itemize}
-\item \textbf{Dati statici}: includono informazioni identificative della nave, come MMSI, nome, tipo e dimensioni.
+\item \textbf{Dati statici}: includono informazioni identificative della nave, come MMSI (Maritime Mobile Service Identity), nome, tipo e dimensioni.
 \item \textbf{Dati dinamici}: descrivono lo stato corrente della navigazione, tra cui posizione GPS, velocità (SOG), rotta (COG), orientamento della prua (HE), variazione della rotta (ROT) e stato operativo.
 \item \textbf{Dati di viaggio}: comprendono informazioni aggiuntive come pescaggio, tipo di carico, destinazione ed tempo stimato di arrivo (ETA). Essendo inseriti manualmente, risultano generalmente meno affidabili \cite{pallotta}.
 \end{itemize}
@@ -127,7 +127,7 @@ e la difficoltà di generalizzazione a contesti geografici diversi \cite{mascaro
 \subsection{Approcci Stocastici}
 
 Gli approcci stocastici modellano il comportamento delle navi come un processo probabilistico. 
-Tra le tecniche più comuni si trovano GMM, KDE, Gaussian Process e reti bayesiane.
+Tra le tecniche più comuni si trovano Gaussian Mixture Model (GMM), Kernel Density Estimation (KDE), Gaussian Process e reti bayesiane.
 
 In generale, questi metodi stimano la distribuzione delle traiettorie normali a partire dai dati storici e 
 classificano come anomale quelle con bassa probabilità. 

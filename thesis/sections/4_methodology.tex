@@ -26,6 +26,7 @@ probabilistico (KDE e distribuzione di Weibull).
 
 Le sezioni seguenti descrivono ciascuna fase nel dettaglio, a partire
 dalla descrizione del dataset utilizzato.
+I valori di tutti i parametri della pipeline sono riassunti nell'Appendice~\ref{app:params}.
 
 \section{Dataset}\label{sec:meth_dataset}
 
@@ -278,6 +279,7 @@ La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il 
 anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
 e processato in batch. L'analisi è condotta a posteriori su un periodo già concluso, per cui l'aggiornamento continuo del modello non è necessario;
 inoltre l'elaborazione messaggio per messaggio sarebbe stata troppo onerosa per l'hardware disponibile.
+Lo pseudocodice delle fasi della pipeline è riportato nell'Appendice~\ref{app:pseudocode}.
 
 
 \subsection{Identificazione dei waypoint: DBSCAN e H-DBSCAN}\label{ssec:meth_clustering}
@@ -337,6 +339,7 @@ Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferi
 
 \subsubsection{H-DBSCAN}
  
+\rev{H-DBSCAN è stato proposto da Campello et al.~\cite{campello2013} come estensione gerarchica di DBSCAN.}
 Il motivo principale per introdurre H-DBSCAN è la sua capacità di identificare cluster di densità variabile, cosa che DBSCAN non 
 riesce a gestire bene. %~\cite{schubert2017}. 
 Il traffico nelle Hawaii presenta una densità fortemente eterogenea: i porti principali come Honolulu hanno concentrazioni 
@@ -527,6 +530,8 @@ in cui ogni punto pesa in proporzione alla propria velocità (\texttt{SOG}). Que
 alta nelle zone con molto traffico e con le navi che transitano a velocità elevata.
 Il prodotto delle due KDE, valutato in ogni punto della rotta, fornisce la densità $p_i$ del punto,
 che combina informazione spaziale e cinematica.
+Ciascuna KDE è una densità su due coordinate espresse in gradi e si misura quindi in deg$^{-2}$,
+per cui la densità $p_i$, prodotto delle due, si misura in deg$^{-4}$.
 Si tratta di una versione semplificata del contributo $P(v_t \mid s_t, R)$ della
 Sezione~\ref{ssec:meth_model}, in cui le probabilità della posizione e delle componenti della velocità
 sono stimate sui soli punti della rotta che cadono nello stato $s_t$. Qui invece entrambe le KDE sono

@@ -1,0 +1,461 @@
+% sections/7_appendices.tex
+% Appendici aggiunte dopo la revisione del relatore (novembre 2026)
+
+% ---------------------------------------------------------------------------------------------
+\chapter[Parametri della pipeline]{\rev{Parametri della pipeline}}\label{app:params}
+
+\begin{revblock}
+La Tabella~\ref{tab:app_params} riassume i parametri usati nelle tre fasi della pipeline, nell'ordine
+in cui intervengono. I nomi in carattere monospaziato sono quelli delle costanti e degli argomenti
+usati nel codice. Gli ultimi valori della tabella non sono fissati a priori ma stimati sui dati della
+rotta selezionata, e sono riportati per completezza.
+\end{revblock}
+
+{\small\renewcommand{\arraystretch}{1.15}\revrows
+\begin{longtable}{>{\raggedright\arraybackslash}p{0.33\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.30\textwidth}}
+\caption[Parametri della pipeline e relativi valori.]{\rev{Parametri della pipeline e relativi valori.}}\label{tab:app_params} \\
+\toprule
+\textbf{Parametro} & \textbf{Valore} & \textbf{Note} \\
+\midrule
+\endfirsthead
+\multicolumn{3}{l}{\small\itshape Tabella~\ref{tab:app_params} (continua)} \\
+\toprule
+\textbf{Parametro} & \textbf{Valore} & \textbf{Note} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{3}{r}{\small\itshape continua nella pagina successiva} \\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{3}{l}{\textit{Pre-processing (Sezione~\ref{sec:meth_preprocessing})}} \\
+\midrule
+Latitudine dell'area di studio & da 18,76651°N a 22,63089°N & \texttt{LAT\_MIN}, \texttt{LAT\_MAX} \\
+Longitudine dell'area di studio & da 160,11085°W a 154,38957°W & \texttt{LON\_MIN}, \texttt{LON\_MAX} \\
+Soglia di attività delle navi & 10\% della media dei record per nave & le navi con meno record vengono escluse \\
+Raggio terrestre & 6.378.137~m & raggio equatoriale WGS-84 \\
+Gap per lo stato \emph{lost}/\emph{return} & 620~s & \texttt{LOST\_TIME\_\allowbreak THRESHOLD\_SECONDS} \\
+Gap per lo stato \emph{exit}/\emph{entry} & 12~h & \texttt{EXIT\_TIME\_\allowbreak THRESHOLD\_HOURS} \\
+Velocità massima plausibile & 102~nodi & \texttt{ABSURD\_SPEED\_\allowbreak THRESHOLD} \\
+Soglia di velocità per lo stato \emph{stationary} & 0,5~nodi & \texttt{SPEED\_THRESHOLD} \\
+\midrule
+\multicolumn{3}{l}{\textit{Knowledge Discovery (Sezione~\ref{sec:meth_algorithm})}} \\
+\midrule
+Cifre decimali di \texttt{LAT} e \texttt{LON} & 4 & risoluzione di circa 10~m \\
+Peso di una coordinata aggregata & $\max(1, \mathrm{round}(\log_2 n))$ & $n$ = occorrenze della coordinata \\
+DBSCAN, raggio dell'intorno $\varepsilon$ & 0,075° & circa 8~km \\
+DBSCAN, peso minimo $N_{\min}$ & 10 & \texttt{min\_samples} \\
+H-DBSCAN, dimensione minima dei cluster & 30 punti & \texttt{min\_cluster\_size} \\
+H-DBSCAN, dimensione massima dei cluster & 10.000 punti & \texttt{max\_cluster\_size} \\
+H-DBSCAN, distanza di fusione dei cluster & 0,01° & \texttt{cluster\_selection\_\allowbreak epsilon}, circa 1~km \\
+Waypoint significativo & \texttt{Avg\_Speed} $\leq$ 0,5~nodi oppure \emph{entry}/\emph{exit} & Sezione~\ref{ssec:meth_routes} \\
+Rotta analizzata & \texttt{WP\_135 - WP\_118} & da Honolulu a Kalaeloa, 184 trip di 40 navi \\
+\midrule
+\multicolumn{3}{l}{\textit{Anomaly detection (Sezione~\ref{sec:meth_anomaly})}} \\
+\midrule
+Larghezza di banda delle KDE & regola di Scott & valore predefinito di \texttt{gaussian\_kde} \\
+Pesi della seconda KDE & \texttt{SOG} del punto & \\
+Raggio dello stato $d$ & 500~m & \texttt{DISTANCE\_\allowbreak PARAMETER\_METERS} \\
+Numero minimo di punti di un trip & 3 & \texttt{SHORT\_TRIP\_\allowbreak THRESHOLD} \\
+Numero di lag & 11 & equidistanti \\
+Lag minimo & $\max(30~\mathrm{s},\ D_{\min}/20)$ & $D_{\min}$ = durata del trip più breve; 252~s \\
+Lag massimo & $\min(D_{\mathrm{med}}/5,\ 3.600~\mathrm{s})$ & $D_{\mathrm{med}}$ = durata mediana dei trip; 1.679~s \\
+Tolleranza sul lag & 50\%, 40\% o 30\% & 50\% fino a 1,5 volte il lag minimo, 40\% fino al lag mediano (965~s), 30\% oltre \\
+Valori di $\Delta p$ ammessi nella stima & da 0 a 10.000~m & estremi esclusi \\
+Numero minimo di valori di $\Delta p$ per lag & 10 & altrimenti il lag viene scartato \\
+Soglia di anomalia & $Q_1 - 1{,}5\,\mathrm{IQR}$ & regola di Tukey sui punteggi \\
+\midrule
+\multicolumn{3}{l}{\textit{Valori stimati sulla rotta selezionata (Capitolo~\ref{chap:results})}} \\
+\midrule
+Coefficiente $m$ della relazione $\alpha = m \cdot \Delta t$ & 1,3105~m/s & regressione sui parametri di scala \\
+Parametro di forma $\beta$ & 0,9358 & media sugli 11 lag \\
+Soglia di anomalia & 1.035,48 & $Q_1 = 1.760{,}74$ e $Q_3 = 2.244{,}25$ \\
+\end{longtable}
+}
+
+% ---------------------------------------------------------------------------------------------
+\chapter[Esempi di etichettatura]{\rev{Esempi di etichettatura}}\label{app:labeling}
+
+\begin{revblock}
+Questa appendice riporta un trip per ciascuna delle tre classi usate nell'etichettatura manuale
+(Sezione~\ref{ssec:res_metrics}). In ogni figura il trip è evidenziato in rosso, mentre in grigio
+sono riportati i punti di tutti gli altri trip della rotta \texttt{WP\_135 - WP\_118}. È la stessa
+vista usata durante l'etichettatura, in cui ogni trip veniva giudicato confrontandolo con il
+corridoio seguito dalla maggior parte dei trip.
+\end{revblock}
+
+% Le immagini vanno salvate in images/Appendix/ con i nomi indicati sotto.
+% Finché un'immagine manca, al suo posto compare un riquadro segnaposto.
+\newcommand{\appimage}[1]{%
+    \IfFileExists{images/Appendix/#1.png}%
+        {\includegraphics[width=0.85\textwidth]{Appendix/#1.png}}%
+        {\fbox{\parbox[c][0.4\textwidth][c]{0.85\textwidth}{\centering Segnaposto: \texttt{images/Appendix/\detokenize{#1}.png}}}}%
+}
+
+\begin{revblock}
+La Figura~\ref{fig:app_label_normal} mostra il trip 23184, il primo del ranking per punteggio di
+normalità. Parte dal porto di Honolulu e raggiunge il porto di Kalaeloa in circa 2 ore e 26 minuti,
+restando per tutto il percorso all'interno del corridoio. Nessun suo punto dista più di 100~m dai
+punti degli altri trip normali. È quindi stato etichettato come normale.
+\end{revblock}
+
+\begin{figure}[htbp]
+    \centering
+    \appimage{esempio_normale}
+    \caption[Trip 23184, etichettato come normale.]{\rev{Trip 23184, etichettato come normale.}}\label{fig:app_label_normal}
+\end{figure}
+
+\begin{revblock}
+La Figura~\ref{fig:app_label_deviation} mostra il trip 3372, l'ultimo del ranking. Il trip dura
+circa 4 ore e 18 minuti, quasi il doppio della durata mediana dei trip della rotta, e per oltre un
+terzo dei suoi punti si trova a più di 1~km dai punti dei trip normali, con uno scostamento massimo
+di circa 1,6~km a nord del corridoio, cioè verso la costa. Poiché un tratto del percorso esce
+chiaramente dal corridoio, il trip è stato etichettato come route deviation.
+\end{revblock}
+
+\begin{figure}[htbp]
+    \centering
+    \appimage{esempio_route_deviation}
+    \caption[Trip 3372, etichettato come route deviation.]{\rev{Trip 3372, etichettato come route deviation.}}\label{fig:app_label_deviation}
+\end{figure}
+
+\begin{revblock}
+La Figura~\ref{fig:app_label_other} mostra il trip 23085. Il percorso resta all'interno del
+corridoio, ma il trip termina a circa 3,6~km a sud-ovest del punto in cui terminano di solito i
+trip normali, cioè fuori dal porto di Kalaeloa. Rientra quindi tra i 15 trip che terminano il
+viaggio fuori dal porto di arrivo ed è stato etichettato come altra anomalia. Con la soglia di
+Tukey il metodo lo classifica come normale, coerentemente con il fatto che il percorso non si
+discosta dal corridoio.
+\end{revblock}
+
+\begin{figure}[htbp]
+    \centering
+    \appimage{esempio_altra_anomalia}
+    \caption[Trip 23085, etichettato come altra anomalia.]{\rev{Trip 23085, etichettato come altra anomalia.}}\label{fig:app_label_other}
+\end{figure}
+
+% ---------------------------------------------------------------------------------------------
+\chapter[Pseudocodice della pipeline]{\rev{Pseudocodice della pipeline}}\label{app:pseudocode}
+
+\begin{revblock}
+Gli Algoritmi~\ref{alg:app_discovery}, \ref{alg:app_model} e~\ref{alg:app_score} riassumono le tre
+fasi della pipeline descritte nel Capitolo~\ref{chap:methodology}. Lo pseudocodice segue
+l'implementazione e non l'algoritmo originale di Pallotta et al.~\cite{pallotta}. Per brevità sono
+omessi i passaggi di importazione e pulizia descritti nella Sezione~\ref{sec:meth_preprocessing},
+e $\mathrm{GCD}(a, b)$ indica la Great-Circle Distance tra due posizioni $a$ e $b$.
+\end{revblock}
+
+\begin{algorithm}[htbp]
+\caption[Classificazione degli stati, estrazione dei waypoint e delle rotte.]{\rev{Classificazione degli stati, estrazione dei waypoint e delle rotte.}}\label{alg:app_discovery}
+\begin{revblock}
+\begin{algorithmic}[1]
+\Require record AIS puliti, soglie $T_{\mathrm{lost}} = 620$~s, $T_{\mathrm{exit}} = 12$~h,
+    $v_{\max} = 102$~nodi, $v_s = 0{,}5$~nodi
+\Ensure waypoint, etichetta di rotta di ogni punto, trip
+\ForAll{nave}
+    \State ordina i punti della nave per \texttt{BaseDateTime}
+    \ForAll{coppia di punti consecutivi $(i-1, i)$}
+        \State $\Delta t \gets t_i - t_{i-1}$, \quad $v_i \gets \mathrm{GCD}(x_{i-1}, x_i) / \Delta t$
+        \If{$\Delta t > T_{\mathrm{lost}}$}
+            \State $v_i \gets \texttt{SOG}_i$ se $\texttt{SOG}_i < v_{\max}$
+            \State stato di $i-1$ e $i$: \emph{lost} e \emph{return}, oppure \emph{exit} ed \emph{entry} se $\Delta t > T_{\mathrm{exit}}$
+        \EndIf
+    \EndFor
+    \State elimina i punti con $v_i \geq v_{\max}$
+    \State punti senza stato: \emph{stationary} se $v_i \leq v_s$, altrimenti \emph{sailing}
+    \State primo punto \emph{entry}, ultimo punto \emph{exit}; elimina gli \emph{entry} e gli \emph{exit} consecutivi ripetuti
+\EndFor
+\State $P \gets$ punti \emph{stationary}, \emph{entry} ed \emph{exit}
+\State aggrega $P$ per coppia (\texttt{LAT}, \texttt{LON}) con peso $w = \max(1, \mathrm{round}(\log_2 n))$
+\State replica ogni coordinata $w$ volte ed esegui H-DBSCAN
+\ForAll{cluster $k$}
+    \State waypoint $\texttt{WP\_}k \gets$ inviluppo convesso dei punti del cluster
+\EndFor
+\ForAll{nave e periodo (\emph{entry}, \emph{exit}) della nave}
+    \ForAll{punto $i$ del periodo}
+        \If{$i$ è in un waypoint e ($v_i \leq v_s$ oppure $i$ è \emph{entry} o \emph{exit})}
+            \State etichetta di $i \gets$ nome del waypoint significativo
+        \Else
+            \State etichetta di $i \gets$ \texttt{WP\_X - WP\_Y}, con \texttt{WP\_X} e \texttt{WP\_Y}
+                waypoint significativi precedente e successivo (\texttt{<NA>} se assenti)
+        \EndIf
+    \EndFor
+\EndFor
+\State trip $\gets$ sequenze di punti consecutivi con la stessa etichetta di rotta \texttt{WP\_X - WP\_Y}
+\end{algorithmic}
+\end{revblock}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption[Stima del modello di normalità di una rotta $R$.]{\rev{Stima del modello di normalità di una rotta {$R$}.}}\label{alg:app_model}
+\begin{revblock}
+\begin{algorithmic}[1]
+\Require punti e trip della rotta $R$, raggio dello stato $d = 500$~m, 11 lag
+\Ensure densità $p_j$, termini $L_i$, parametri $m$ e $\beta$
+\State $f_{\mathrm{geo}} \gets$ KDE su (\texttt{LON}, \texttt{LAT}) di tutti i punti di $R$
+\State $f_{v} \gets$ KDE su (\texttt{LON}, \texttt{LAT}) con pesi pari a \texttt{SOG}
+\ForAll{punto $j$ di $R$}
+    \State $p_j \gets f_{\mathrm{geo}}(x_j) \cdot f_{v}(x_j)$
+\EndFor
+\ForAll{punto $i$ di $R$}
+    \State $N_i \gets \{ j : \mathrm{GCD}(x_i, x_j) < d \}$, \quad $L_i \gets \sum_{j \in N_i} \log p_j$
+\EndFor
+\State $\tau_{\min} \gets \max(30~\mathrm{s}, D_{\min}/20)$, \quad $\tau_{\max} \gets \min(D_{\mathrm{med}}/5, 3.600~\mathrm{s})$
+\State $\tau_1, \dots, \tau_{11} \gets$ lag equidistanti tra $\tau_{\min}$ e $\tau_{\max}$
+\ForAll{trip di $R$ e punto $i$ del trip, escluso il primo}
+    \ForAll{lag $\tau_k$}
+        \State $j \gets$ punto del trip con timestamp più vicino a $t_i - \tau_k$
+        \If{$|(t_i - t_j) - \tau_k| \leq \mathrm{toll}(\tau_k) \cdot \tau_k$}
+            \State $\hat{x}_i \gets x_j + (V_{x,j}, V_{y,j}) \cdot (t_i - t_j)$, convertito in gradi
+            \State aggiungi $\Delta p = \mathrm{GCD}(\hat{x}_i, x_i)$ all'insieme $D_k$
+        \EndIf
+    \EndFor
+\EndFor
+\ForAll{lag $\tau_k$}
+    \State $(\alpha_k, \beta_k) \gets$ stima di massima verosimiglianza di una Weibull su $D_k$
+\EndFor
+\State $m \gets$ regressione ai minimi quadrati di $\alpha_k = m \cdot \tau_k$, \quad $\beta \gets$ media dei $\beta_k$
+\end{algorithmic}
+\end{revblock}
+\end{algorithm}
+
+\begin{algorithm}[htbp]
+\caption[Punteggio di normalità dei trip e classificazione.]{\rev{Punteggio di normalità dei trip e classificazione.}}\label{alg:app_score}
+\begin{revblock}
+\begin{algorithmic}[1]
+\Require trip della rotta $R$, termini $L_i$, parametri $m$ e $\beta$, probabilità a priori $P(R)$
+\Ensure punteggio di ogni trip, ranking e trip anomali
+\ForAll{trip $T = (x_1, \dots, x_n)$}
+    \State $O(T) \gets \frac{1}{n} \sum_{i=1}^{n} L_i$ \Comment{termine di osservazione}
+    \For{$t = 2, \dots, n$}
+        \State $\Delta t_t \gets t_t - t_{t-1}$, \quad $\hat{x}_t \gets x_{t-1} + (V_{x,t-1}, V_{y,t-1}) \cdot \Delta t_t$
+        \State $\Delta p_t \gets \mathrm{GCD}(\hat{x}_t, x_t)$
+    \EndFor
+    \State $Tr(T) \gets -\frac{1}{n-1} \sum_{t=2}^{n} {\left( \Delta p_t / (m \cdot \Delta t_t) \right)}^{\beta}$ \Comment{termine di transizione}
+    \State $S(T) \gets O(T) + Tr(T) + \log P(R)$
+\EndFor
+\State ordina i trip per $S(T)$ decrescente
+\State $s \gets Q_1 - 1{,}5 \cdot (Q_3 - Q_1)$, con $Q_1$ e $Q_3$ quartili dei punteggi
+\State \Return trip con $S(T) < s$ come anomali
+\end{algorithmic}
+\end{revblock}
+\end{algorithm}
+
+% ---------------------------------------------------------------------------------------------
+\chapter[Punteggi di tutti i trip]{\rev{Punteggi di tutti i trip}}\label{app:trips}
+
+\begin{revblock}
+La Tabella~\ref{tab:app_trips} riporta tutti i 184 trip della rotta \texttt{WP\_135 - WP\_118},
+ordinati per punteggio di normalità decrescente. Per ogni trip sono indicati la posizione nel
+ranking, il punteggio, la classe assegnata nell'etichettatura manuale e la decisione del metodo
+con la soglia di Tukey ($s = 1.035{,}48$). La linea orizzontale prima della posizione 176 separa
+i trip classificati come normali da quelli classificati come anomali.
+\end{revblock}
+
+{\small
+\renewcommand{\arraystretch}{0.8}\revrows
+\begin{longtable}{rrrll}
+\caption[Punteggio di normalità, etichetta manuale e decisione del metodo per i 184 trip della
+rotta \texttt{WP\_135 - WP\_118}.]{\rev{Punteggio di normalità, etichetta manuale e decisione del metodo per i 184 trip della
+rotta \mbox{\texttt{WP\_135 - WP\_118}}.}}\label{tab:app_trips} \\
+\toprule
+\textbf{Pos.} & \textbf{Trip} & \textbf{Punteggio} & \textbf{Etichetta} & \textbf{Decisione} \\
+\midrule
+\endfirsthead
+\multicolumn{5}{l}{\itshape Tabella~\ref{tab:app_trips} (continua)} \\
+\toprule
+\textbf{Pos.} & \textbf{Trip} & \textbf{Punteggio} & \textbf{Etichetta} & \textbf{Decisione} \\
+\midrule
+\endhead
+\midrule
+\multicolumn{5}{r}{\itshape continua nella pagina successiva} \\
+\endfoot
+\bottomrule
+\endlastfoot
+1 & 23184 & 3.134,05 & normale & normale \\
+2 & 24337 & 2.965,51 & normale & normale \\
+3 & 23474 & 2.952,94 & altra anomalia & normale \\
+4 & 8857 & 2.856,19 & altra anomalia & normale \\
+5 & 11128 & 2.724,76 & normale & normale \\
+6 & 14569 & 2.651,54 & normale & normale \\
+7 & 8374 & 2.618,94 & altra anomalia & normale \\
+8 & 15733 & 2.596,34 & normale & normale \\
+9 & 25609 & 2.577,47 & altra anomalia & normale \\
+10 & 11307 & 2.534,98 & normale & normale \\
+11 & 25652 & 2.532,13 & route deviation & normale \\
+12 & 22522 & 2.523,99 & normale & normale \\
+13 & 17090 & 2.513,76 & normale & normale \\
+14 & 11867 & 2.507,22 & normale & normale \\
+15 & 26303 & 2.494,31 & normale & normale \\
+16 & 34662 & 2.491,68 & normale & normale \\
+17 & 25676 & 2.491,61 & normale & normale \\
+18 & 1621 & 2.489,23 & normale & normale \\
+19 & 16293 & 2.469,12 & normale & normale \\
+20 & 6085 & 2.455,83 & normale & normale \\
+21 & 213 & 2.445,76 & normale & normale \\
+22 & 6125 & 2.433,12 & normale & normale \\
+23 & 11374 & 2.426,30 & normale & normale \\
+24 & 18288 & 2.423,14 & normale & normale \\
+25 & 6133 & 2.414,42 & normale & normale \\
+26 & 16662 & 2.413,10 & normale & normale \\
+27 & 16522 & 2.405,96 & normale & normale \\
+28 & 14574 & 2.395,62 & normale & normale \\
+29 & 6186 & 2.381,80 & normale & normale \\
+30 & 21675 & 2.360,52 & altra anomalia & normale \\
+31 & 25630 & 2.360,16 & normale & normale \\
+32 & 11382 & 2.352,35 & normale & normale \\
+33 & 11201 & 2.350,80 & normale & normale \\
+34 & 8225 & 2.348,82 & normale & normale \\
+35 & 11271 & 2.341,59 & normale & normale \\
+36 & 11468 & 2.333,42 & normale & normale \\
+37 & 23889 & 2.330,79 & route deviation & normale \\
+38 & 13386 & 2.329,52 & normale & normale \\
+39 & 6105 & 2.329,07 & normale & normale \\
+40 & 14485 & 2.325,21 & normale & normale \\
+41 & 11517 & 2.310,81 & normale & normale \\
+42 & 11930 & 2.299,88 & normale & normale \\
+43 & 18355 & 2.293,30 & normale & normale \\
+44 & 16348 & 2.278,42 & normale & normale \\
+45 & 15881 & 2.276,87 & normale & normale \\
+46 & 3442 & 2.255,61 & normale & normale \\
+47 & 23428 & 2.240,46 & normale & normale \\
+48 & 6163 & 2.232,66 & normale & normale \\
+49 & 31626 & 2.226,68 & normale & normale \\
+50 & 11170 & 2.216,23 & normale & normale \\
+51 & 23145 & 2.215,56 & normale & normale \\
+52 & 6148 & 2.211,66 & normale & normale \\
+53 & 25736 & 2.210,25 & normale & normale \\
+54 & 25752 & 2.206,87 & normale & normale \\
+55 & 16030 & 2.203,31 & normale & normale \\
+56 & 24603 & 2.199,33 & normale & normale \\
+57 & 15953 & 2.197,81 & normale & normale \\
+58 & 6320 & 2.189,98 & normale & normale \\
+59 & 23148 & 2.189,32 & normale & normale \\
+60 & 16147 & 2.186,77 & normale & normale \\
+61 & 30528 & 2.186,36 & normale & normale \\
+62 & 11141 & 2.183,41 & normale & normale \\
+63 & 23835 & 2.182,25 & normale & normale \\
+64 & 16205 & 2.176,84 & normale & normale \\
+65 & 24582 & 2.174,38 & normale & normale \\
+66 & 25604 & 2.173,06 & normale & normale \\
+67 & 16546 & 2.172,10 & normale & normale \\
+68 & 18533 & 2.170,91 & normale & normale \\
+69 & 16134 & 2.169,66 & normale & normale \\
+70 & 22247 & 2.160,63 & normale & normale \\
+71 & 14528 & 2.155,42 & normale & normale \\
+72 & 11486 & 2.148,57 & normale & normale \\
+73 & 27940 & 2.146,61 & normale & normale \\
+74 & 10765 & 2.132,68 & normale & normale \\
+75 & 5475 & 2.129,88 & normale & normale \\
+76 & 21884 & 2.127,28 & normale & normale \\
+77 & 3452 & 2.126,78 & altra anomalia & normale \\
+78 & 18336 & 2.122,83 & normale & normale \\
+79 & 12106 & 2.120,80 & normale & normale \\
+80 & 24357 & 2.119,59 & normale & normale \\
+81 & 12064 & 2.116,97 & normale & normale \\
+82 & 23652 & 2.113,41 & normale & normale \\
+83 & 30501 & 2.106,10 & normale & normale \\
+84 & 24683 & 2.103,93 & normale & normale \\
+85 & 6203 & 2.097,11 & normale & normale \\
+86 & 11248 & 2.095,54 & normale & normale \\
+87 & 30641 & 2.093,22 & normale & normale \\
+88 & 10583 & 2.084,96 & route deviation & normale \\
+89 & 23490 & 2.084,64 & normale & normale \\
+90 & 23118 & 2.081,66 & normale & normale \\
+91 & 9179 & 2.080,21 & normale & normale \\
+92 & 18558 & 2.080,09 & normale & normale \\
+93 & 6117 & 2.077,21 & normale & normale \\
+94 & 23631 & 2.076,72 & normale & normale \\
+95 & 24315 & 2.076,07 & normale & normale \\
+96 & 8557 & 2.068,36 & normale & normale \\
+97 & 16380 & 2.067,07 & normale & normale \\
+98 & 16080 & 2.066,39 & normale & normale \\
+99 & 15563 & 2.063,52 & normale & normale \\
+100 & 11353 & 2.059,59 & route deviation & normale \\
+101 & 23133 & 2.052,77 & normale & normale \\
+102 & 23608 & 2.052,05 & normale & normale \\
+103 & 8167 & 2.049,86 & normale & normale \\
+104 & 23047 & 2.040,64 & normale & normale \\
+105 & 14447 & 2.021,46 & normale & normale \\
+106 & 23538 & 2.019,14 & altra anomalia & normale \\
+107 & 23892 & 2.013,56 & altra anomalia & normale \\
+108 & 23157 & 2.011,40 & normale & normale \\
+109 & 16616 & 2.005,69 & route deviation & normale \\
+110 & 23930 & 2.004,05 & normale & normale \\
+111 & 6175 & 2.002,26 & normale & normale \\
+112 & 11076 & 1.994,67 & normale & normale \\
+113 & 3430 & 1.988,74 & normale & normale \\
+114 & 18294 & 1.987,47 & normale & normale \\
+115 & 18476 & 1.982,70 & normale & normale \\
+116 & 18641 & 1.980,55 & normale & normale \\
+117 & 11507 & 1.968,01 & normale & normale \\
+118 & 24447 & 1.947,51 & normale & normale \\
+119 & 12225 & 1.942,79 & normale & normale \\
+120 & 25713 & 1.941,70 & normale & normale \\
+121 & 23362 & 1.915,00 & normale & normale \\
+122 & 12609 & 1.912,16 & normale & normale \\
+123 & 22138 & 1.899,06 & normale & normale \\
+124 & 24737 & 1.898,56 & altra anomalia & normale \\
+125 & 22611 & 1.897,70 & normale & normale \\
+126 & 11904 & 1.894,48 & normale & normale \\
+127 & 21732 & 1.891,61 & normale & normale \\
+128 & 18451 & 1.858,02 & normale & normale \\
+129 & 11016 & 1.857,27 & normale & normale \\
+130 & 12160 & 1.849,75 & normale & normale \\
+131 & 23248 & 1.847,74 & normale & normale \\
+132 & 21491 & 1.843,13 & normale & normale \\
+133 & 24730 & 1.832,03 & normale & normale \\
+134 & 24757 & 1.823,82 & normale & normale \\
+135 & 8127 & 1.800,84 & altra anomalia & normale \\
+136 & 21468 & 1.792,39 & normale & normale \\
+137 & 1035 & 1.781,33 & normale & normale \\
+138 & 22452 & 1.762,32 & altra anomalia & normale \\
+139 & 15904 & 1.756,00 & normale & normale \\
+140 & 11843 & 1.750,64 & normale & normale \\
+141 & 24074 & 1.750,62 & normale & normale \\
+142 & 24294 & 1.749,40 & normale & normale \\
+143 & 11294 & 1.742,76 & normale & normale \\
+144 & 16714 & 1.737,40 & route deviation & normale \\
+145 & 28510 & 1.737,03 & normale & normale \\
+146 & 21825 & 1.725,54 & normale & normale \\
+147 & 23017 & 1.713,64 & altra anomalia & normale \\
+148 & 16486 & 1.707,56 & normale & normale \\
+149 & 30600 & 1.691,34 & normale & normale \\
+150 & 23111 & 1.683,49 & normale & normale \\
+151 & 4037 & 1.680,08 & normale & normale \\
+152 & 18420 & 1.668,98 & normale & normale \\
+153 & 5482 & 1.654,28 & route deviation & normale \\
+154 & 34429 & 1.653,86 & normale & normale \\
+155 & 34437 & 1.653,26 & route deviation & normale \\
+156 & 11277 & 1.649,70 & route deviation & normale \\
+157 & 24594 & 1.633,04 & altra anomalia & normale \\
+158 & 24562 & 1.632,40 & altra anomalia & normale \\
+159 & 23388 & 1.610,65 & altra anomalia & normale \\
+160 & 21727 & 1.585,34 & normale & normale \\
+161 & 24062 & 1.568,88 & altra anomalia & normale \\
+162 & 23445 & 1.568,61 & altra anomalia & normale \\
+163 & 12338 & 1.554,75 & normale & normale \\
+164 & 8148 & 1.530,45 & altra anomalia & normale \\
+165 & 18368 & 1.522,81 & normale & normale \\
+166 & 11362 & 1.520,61 & route deviation & normale \\
+167 & 5650 & 1.506,58 & route deviation & normale \\
+168 & 22218 & 1.478,73 & altra anomalia & normale \\
+169 & 12022 & 1.435,41 & normale & normale \\
+170 & 23085 & 1.418,68 & altra anomalia & normale \\
+171 & 3411 & 1.306,05 & normale & normale \\
+172 & 11335 & 1.221,76 & normale & normale \\
+173 & 34378 & 1.205,97 & route deviation & normale \\
+174 & 11767 & 1.200,51 & normale & normale \\
+175 & 28433 & 1.196,21 & normale & normale \\
+\midrule
+176 & 30752 & 1.014,65 & route deviation & anomalo \\
+177 & 7889 & 942,09 & route deviation & anomalo \\
+178 & 24701 & 814,71 & route deviation & anomalo \\
+179 & 10279 & 733,16 & route deviation & anomalo \\
+180 & 30627 & 712,32 & route deviation & anomalo \\
+181 & 10288 & 468,32 & route deviation & anomalo \\
+182 & 3362 & 420,81 & route deviation & anomalo \\
+183 & 3413 & 385,96 & route deviation & anomalo \\
+184 & 3372 & 211,39 & route deviation & anomalo \\
+\end{longtable}
+}
