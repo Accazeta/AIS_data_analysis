@@ -521,13 +521,13 @@ inferiore, cioè i primi nove della colonna dei punteggi più bassi della
 Tabella~\ref{tab:res_score_ranking}.
 
 La Figura~\ref{fig:res_eval_cm} riporta le matrici di confusione dei due casi e la
-Tabella~\ref{tab:res_metrics} le metriche che ne derivano. \rev{Nel calcolo delle metriche la classe
+Tabella~\ref{tab:res_metrics} le metriche che ne derivano. Nel calcolo delle metriche la classe
 positiva è quella dei trip anomali. Indicando con TP i veri positivi (trip anomali classificati come
 anomali), con FP i falsi positivi (trip normali classificati come anomali) e con FN i falsi negativi
 (trip anomali non rilevati), la precision $P = \mathit{TP}/(\mathit{TP}+\mathit{FP})$ è la frazione dei trip segnalati che sono
 effettivamente anomali e la recall $R = \mathit{TP}/(\mathit{TP}+\mathit{FN})$ è la frazione dei trip anomali che il metodo
 rileva. L'F1, pari a $2PR/(P+R)$, è la media armonica delle due ed è alta solo se lo sono entrambe.
-L'accuracy è la frazione dei trip classificati correttamente.} I nove trip classificati come anomali
+L'accuracy è la frazione dei trip classificati correttamente. I nove trip classificati come anomali
 sono tutti route deviation, quindi in entrambi i casi non ci sono falsi positivi e la precision
 è pari a 1. La recall è invece bassa. Il metodo rileva 9 delle 41 anomalie del caso (a) e 9
 delle 21 route deviation del caso (b). Escludere le altre anomalie fa salire la recall da 0,220
@@ -563,10 +563,10 @@ AUC             & 0,751 & 0,844 \\
 
 La soglia di Tukey è molto severa. Per valutare il punteggio indipendentemente dalla soglia, la
 Figura~\ref{fig:res_eval_roc} riporta le curve ROC (Receiver Operating Characteristic) dei due casi, ottenute facendo variare la
-soglia su tutti i valori del punteggio. \rev{Ogni punto della curva riporta, per una soglia, la recall
+soglia su tutti i valori del punteggio. Ogni punto della curva riporta, per una soglia, la recall
 in funzione del tasso di falsi positivi, cioè della frazione dei trip normali segnalati come anomali.
 L'area sotto la curva (AUC) vale 1 per un ordinamento perfetto e 0,5 per uno casuale.
-Qui vale 0,751 nel caso (a) e 0,844 nel caso (b).} Nel caso (b) la curva sale rapidamente. Con un tasso di falsi positivi di
+Qui vale 0,751 nel caso (a) e 0,844 nel caso (b). Nel caso (b) la curva sale rapidamente. Con un tasso di falsi positivi di
 circa il 6\% si rileva circa il 71\% delle route deviation, per cui una soglia meno severa
 permetterebbe di recuperare buona parte dei trip non rilevati al prezzo di pochi falsi
 positivi. Nel caso (a), invece, la curva resta piatta per un ampio tratto e nella parte alta

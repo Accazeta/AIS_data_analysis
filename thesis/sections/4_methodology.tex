@@ -280,7 +280,6 @@ La presente implementazione riproduce questa struttura a due fasi. Tuttavia, il 
 anzichè aggiornare il modello messaggio per messaggio come nell'algoritmo originale, l'intero dataset viene caricato in memoria
 e processato in batch. L'analisi è condotta a posteriori su un periodo già concluso, per cui l'aggiornamento continuo del modello non è necessario;
 inoltre l'elaborazione messaggio per messaggio sarebbe stata troppo onerosa per l'hardware disponibile.
-Lo pseudocodice delle fasi della pipeline è riportato nell'Appendice~\ref{app:pseudocode}.
 
 
 \subsection{Identificazione dei waypoint: DBSCAN e H-DBSCAN}\label{ssec:meth_clustering}
@@ -340,7 +339,7 @@ Questo passo riproduce l'approccio di Pallotta et al.\ ed è incluso come riferi
 
 \subsubsection{H-DBSCAN}
  
-\rev{H-DBSCAN è stato proposto da Campello et al.~\cite{campello2013} come estensione gerarchica di DBSCAN.}
+H-DBSCAN è stato proposto da Campello et al.~\cite{campello2013} come estensione gerarchica di DBSCAN.
 Il motivo principale per introdurre H-DBSCAN è la sua capacità di identificare cluster di densità variabile, cosa che DBSCAN non 
 riesce a gestire bene. 
 Il traffico nelle Hawaii presenta una densità fortemente eterogenea: i porti principali come Honolulu hanno concentrazioni 

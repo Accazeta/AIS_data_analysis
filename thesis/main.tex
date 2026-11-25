@@ -15,59 +15,9 @@
 \usepackage{emptypage} % Pagine bianche senza intestazione né numero (fronte-retro)
 \usepackage{setspace} % For "interlinea"
 \usepackage{array}
-\usepackage{longtable} % Tabelle su più pagine (Appendice D)
-\usepackage[table]{xcolor} % table: righe colorate nelle tabelle nuove
-\IfFileExists{soul.sty}{\usepackage{soul}}{} % Evidenziazione delle modifiche
+\usepackage{longtable} % Tabelle su più pagine (Appendici A e C)
 \usepackage{hyperref}
-\usepackage{algorithm}      % Pseudocodice (Appendice C)
-\usepackage[noend]{algpseudocode}
-\floatname{algorithm}{Algoritmo}
-\algrenewcommand\algorithmicrequire{\textbf{Input:}}
-\algrenewcommand\algorithmicensure{\textbf{Output:}}
-\algrenewcommand\algorithmicfor{\textbf{per}}
-\algrenewcommand\algorithmicforall{\textbf{per ogni}}
-\algrenewcommand\algorithmicdo{}
-\algrenewcommand\algorithmicif{\textbf{se}}
-\algrenewcommand\algorithmicthen{\textbf{allora}}
-\algrenewcommand\algorithmicelse{\textbf{altrimenti}}
-\algrenewcommand\algorithmicreturn{\textbf{restituisci}}
 
-% Evidenziazione delle modifiche della revisione: sfondo rosso.
-% Per toglierla a revisione conclusa basta sostituire \revisionetrue con \revisionefalse.
-\newif\ifrevisione
-\revisionetrue
-\makeatletter
-\@ifpackageloaded{soul}{%
-    \sethlcolor{red!40}
-    \soulregister{\ref}{7}
-    \soulregister{\cite}{7}
-    \soulregister{\texttt}{1}
-    \soulregister{\textbf}{1}
-    \soulregister{\emph}{1}
-    \newcommand{\revhl}[1]{\hl{#1}}
-}{%
-    \newcommand{\revhl}[1]{#1} % senza soul nessuna evidenziazione
-}
-\makeatother
-\ifrevisione
-    \newcommand{\rev}[1]{\revhl{#1}}
-\else
-    \newcommand{\rev}[1]{#1}
-\fi
-% Paragrafi e blocchi interamente nuovi: sfondo rosso dietro l'intero blocco (non richiede soul)
-\newsavebox{\revbox}
-\newlength{\revparindent}
-\newlength{\revwidth}
-\newenvironment{revblock}{%
-    \par\setlength{\revparindent}{\parindent}%
-    \ifrevisione\setlength{\revwidth}{\dimexpr\linewidth-2\fboxsep\relax}\else\setlength{\revwidth}{\linewidth}\fi
-    \begin{lrbox}{\revbox}\begin{minipage}[t]{\revwidth}\setlength{\parindent}{\revparindent}\ignorespaces
-}{%
-    \end{minipage}\end{lrbox}%
-    \noindent\ifrevisione\colorbox{red!40}{\usebox{\revbox}}\else\usebox{\revbox}\fi\par
-}
-% Righe delle tabelle nuove
-\newcommand{\revrows}{\ifrevisione\rowcolors{1}{red!40}{red!40}\fi}
 \graphicspath{{images/}}
 
 

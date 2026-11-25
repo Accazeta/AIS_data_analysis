@@ -2,18 +2,16 @@
 % Appendici aggiunte dopo la revisione del relatore (novembre 2026)
 
 % ---------------------------------------------------------------------------------------------
-\chapter[Parametri della pipeline]{\rev{Parametri della pipeline}}\label{app:params}
+\chapter{Parametri della pipeline}\label{app:params}
 
-\begin{revblock}
 La Tabella~\ref{tab:app_params} riassume i parametri usati nelle tre fasi della pipeline, nell'ordine
 in cui intervengono. I nomi in carattere monospaziato sono quelli delle costanti e degli argomenti
 usati nel codice. Gli ultimi valori della tabella non sono fissati a priori ma stimati sui dati della
 rotta selezionata, e sono riportati per completezza.
-\end{revblock}
 
-{\small\renewcommand{\arraystretch}{1.15}\revrows
+{\small\renewcommand{\arraystretch}{1.15}
 \begin{longtable}{>{\raggedright\arraybackslash}p{0.33\textwidth} >{\raggedright\arraybackslash}p{0.25\textwidth} >{\raggedright\arraybackslash}p{0.30\textwidth}}
-\caption[Parametri della pipeline e relativi valori.]{\rev{Parametri della pipeline e relativi valori.}}\label{tab:app_params} \\
+\caption{Parametri della pipeline e relativi valori.}\label{tab:app_params} \\
 \toprule
 \textbf{Parametro} & \textbf{Valore} & \textbf{Note} \\
 \midrule
@@ -23,8 +21,7 @@ rotta selezionata, e sono riportati per completezza.
 \textbf{Parametro} & \textbf{Valore} & \textbf{Note} \\
 \midrule
 \endhead
-\midrule
-\multicolumn{3}{r}{\small\itshape continua nella pagina successiva} \\
+\bottomrule
 \endfoot
 \bottomrule
 \endlastfoot
@@ -53,36 +50,33 @@ Rotta analizzata & \texttt{WP\_135 - WP\_118} & da Honolulu a Kalaeloa, 184 trip
 \midrule
 \multicolumn{3}{l}{\textit{Anomaly detection (Sezione~\ref{sec:meth_anomaly})}} \\
 \midrule
-Larghezza di banda delle KDE & regola di Scott & valore predefinito di \texttt{gaussian\_kde} \\
 Pesi della seconda KDE & \texttt{SOG} del punto & \\
 Raggio dello stato $d$ & 500~m & \texttt{DISTANCE\_\allowbreak PARAMETER\_METERS} \\
 Numero minimo di punti di un trip & 3 & \texttt{SHORT\_TRIP\_\allowbreak THRESHOLD} \\
-Numero di lag & 11 & equidistanti \\
+Numero di lag & 11 & \\
 Lag minimo & $\max(30~\mathrm{s},\ D_{\min}/20)$ & $D_{\min}$ = durata del trip più breve; 252~s \\
 Lag massimo & $\min(D_{\mathrm{med}}/5,\ 3.600~\mathrm{s})$ & $D_{\mathrm{med}}$ = durata mediana dei trip; 1.679~s \\
 Tolleranza sul lag & 50\%, 40\% o 30\% & 50\% fino a 1,5 volte il lag minimo, 40\% fino al lag mediano (965~s), 30\% oltre \\
-Valori di $\Delta p$ ammessi nella stima & da 0 a 10.000~m & estremi esclusi \\
-Numero minimo di valori di $\Delta p$ per lag & 10 & altrimenti il lag viene scartato \\
+Valori di $\Delta p$ ammessi nella stima & da 0 a 10.000~m & \\
+Numero minimo di valori di $\Delta p$ per lag & 10 & \\
 Soglia di anomalia & $Q_1 - 1{,}5\,\mathrm{IQR}$ & regola di Tukey sui punteggi \\
 \midrule
 \multicolumn{3}{l}{\textit{Valori stimati sulla rotta selezionata (Capitolo~\ref{chap:results})}} \\
 \midrule
 Coefficiente $m$ della relazione $\alpha = m \cdot \Delta t$ & 1,3105~m/s & regressione sui parametri di scala \\
-Parametro di forma $\beta$ & 0,9358 & media sugli 11 lag \\
+Parametro di forma $\beta$ & 0,9358 & (media) \\
 Soglia di anomalia & 1.035,48 & $Q_1 = 1.760{,}74$ e $Q_3 = 2.244{,}25$ \\
 \end{longtable}
 }
 
 % ---------------------------------------------------------------------------------------------
-\chapter[Esempi di etichettatura]{\rev{Esempi di etichettatura}}\label{app:labeling}
+\chapter{Esempi di etichettatura}\label{app:labeling}
 
-\begin{revblock}
 Questa appendice riporta un trip per ciascuna delle tre classi usate nell'etichettatura manuale
 (Sezione~\ref{ssec:res_metrics}). In ogni figura il trip è evidenziato in rosso, mentre in grigio
 sono riportati i punti di tutti gli altri trip della rotta \texttt{WP\_135 - WP\_118}. È la stessa
 vista usata durante l'etichettatura, in cui ogni trip veniva giudicato confrontandolo con il
 corridoio seguito dalla maggior parte dei trip.
-\end{revblock}
 
 % Le immagini vanno salvate in images/Appendix/ con i nomi indicati sotto.
 % Finché un'immagine manca, al suo posto compare un riquadro segnaposto.
@@ -92,172 +86,57 @@ corridoio seguito dalla maggior parte dei trip.
         {\fbox{\parbox[c][0.4\textwidth][c]{0.85\textwidth}{\centering Segnaposto: \texttt{images/Appendix/\detokenize{#1}.png}}}}%
 }
 
-\begin{revblock}
 La Figura~\ref{fig:app_label_normal} mostra il trip 23184, il primo del ranking per punteggio di
 normalità. Parte dal porto di Honolulu e raggiunge il porto di Kalaeloa in circa 2 ore e 26 minuti,
 restando per tutto il percorso all'interno del corridoio. Nessun suo punto dista più di 100~m dai
 punti degli altri trip normali. È quindi stato etichettato come normale.
-\end{revblock}
 
 \begin{figure}[htbp]
     \centering
     \appimage{esempio_normale}
-    \caption[Trip 23184, etichettato come normale.]{\rev{Trip 23184, etichettato come normale.}}\label{fig:app_label_normal}
+    \caption{Trip 23184, etichettato come normale.}\label{fig:app_label_normal}
 \end{figure}
 
-\begin{revblock}
 La Figura~\ref{fig:app_label_deviation} mostra il trip 3372, l'ultimo del ranking. Il trip dura
 circa 4 ore e 18 minuti, quasi il doppio della durata mediana dei trip della rotta, e per oltre un
 terzo dei suoi punti si trova a più di 1~km dai punti dei trip normali, con uno scostamento massimo
 di circa 1,6~km a nord del corridoio, cioè verso la costa. Poiché un tratto del percorso esce
 chiaramente dal corridoio, il trip è stato etichettato come route deviation.
-\end{revblock}
 
 \begin{figure}[htbp]
     \centering
     \appimage{esempio_route_deviation}
-    \caption[Trip 3372, etichettato come route deviation.]{\rev{Trip 3372, etichettato come route deviation.}}\label{fig:app_label_deviation}
+    \caption{Trip 3372, etichettato come route deviation.}\label{fig:app_label_deviation}
 \end{figure}
 
-\begin{revblock}
 La Figura~\ref{fig:app_label_other} mostra il trip 23085. Il percorso resta all'interno del
 corridoio, ma il trip termina a circa 3,6~km a sud-ovest del punto in cui terminano di solito i
 trip normali, cioè fuori dal porto di Kalaeloa. Rientra quindi tra i 15 trip che terminano il
 viaggio fuori dal porto di arrivo ed è stato etichettato come altra anomalia. Con la soglia di
 Tukey il metodo lo classifica come normale, coerentemente con il fatto che il percorso non si
 discosta dal corridoio.
-\end{revblock}
 
 \begin{figure}[htbp]
     \centering
     \appimage{esempio_altra_anomalia}
-    \caption[Trip 23085, etichettato come altra anomalia.]{\rev{Trip 23085, etichettato come altra anomalia.}}\label{fig:app_label_other}
+    \caption{Trip 23085, etichettato come altra anomalia.}\label{fig:app_label_other}
 \end{figure}
 
 % ---------------------------------------------------------------------------------------------
-\chapter[Pseudocodice della pipeline]{\rev{Pseudocodice della pipeline}}\label{app:pseudocode}
+\chapter{Punteggi di tutti i trip}\label{app:trips}
 
-\begin{revblock}
-Gli Algoritmi~\ref{alg:app_discovery}, \ref{alg:app_model} e~\ref{alg:app_score} riassumono le tre
-fasi della pipeline descritte nel Capitolo~\ref{chap:methodology}. Lo pseudocodice segue
-l'implementazione e non l'algoritmo originale di Pallotta et al.~\cite{pallotta}. Per brevità sono
-omessi i passaggi di importazione e pulizia descritti nella Sezione~\ref{sec:meth_preprocessing},
-e $\mathrm{GCD}(a, b)$ indica la Great-Circle Distance tra due posizioni $a$ e $b$.
-\end{revblock}
-
-\begin{algorithm}[htbp]
-\caption[Classificazione degli stati, estrazione dei waypoint e delle rotte.]{\rev{Classificazione degli stati, estrazione dei waypoint e delle rotte.}}\label{alg:app_discovery}
-\begin{revblock}
-\begin{algorithmic}[1]
-\Require record AIS puliti, soglie $T_{\mathrm{lost}} = 620$~s, $T_{\mathrm{exit}} = 12$~h,
-    $v_{\max} = 102$~nodi, $v_s = 0{,}5$~nodi
-\Ensure waypoint, etichetta di rotta di ogni punto, trip
-\ForAll{nave}
-    \State ordina i punti della nave per \texttt{BaseDateTime}
-    \ForAll{coppia di punti consecutivi $(i-1, i)$}
-        \State $\Delta t \gets t_i - t_{i-1}$, \quad $v_i \gets \mathrm{GCD}(x_{i-1}, x_i) / \Delta t$
-        \If{$\Delta t > T_{\mathrm{lost}}$}
-            \State $v_i \gets \texttt{SOG}_i$ se $\texttt{SOG}_i < v_{\max}$
-            \State stato di $i-1$ e $i$: \emph{lost} e \emph{return}, oppure \emph{exit} ed \emph{entry} se $\Delta t > T_{\mathrm{exit}}$
-        \EndIf
-    \EndFor
-    \State elimina i punti con $v_i \geq v_{\max}$
-    \State punti senza stato: \emph{stationary} se $v_i \leq v_s$, altrimenti \emph{sailing}
-    \State primo punto \emph{entry}, ultimo punto \emph{exit}; elimina gli \emph{entry} e gli \emph{exit} consecutivi ripetuti
-\EndFor
-\State $P \gets$ punti \emph{stationary}, \emph{entry} ed \emph{exit}
-\State aggrega $P$ per coppia (\texttt{LAT}, \texttt{LON}) con peso $w = \max(1, \mathrm{round}(\log_2 n))$
-\State replica ogni coordinata $w$ volte ed esegui H-DBSCAN
-\ForAll{cluster $k$}
-    \State waypoint $\texttt{WP\_}k \gets$ inviluppo convesso dei punti del cluster
-\EndFor
-\ForAll{nave e periodo (\emph{entry}, \emph{exit}) della nave}
-    \ForAll{punto $i$ del periodo}
-        \If{$i$ è in un waypoint e ($v_i \leq v_s$ oppure $i$ è \emph{entry} o \emph{exit})}
-            \State etichetta di $i \gets$ nome del waypoint significativo
-        \Else
-            \State etichetta di $i \gets$ \texttt{WP\_X - WP\_Y}, con \texttt{WP\_X} e \texttt{WP\_Y}
-                waypoint significativi precedente e successivo (\texttt{<NA>} se assenti)
-        \EndIf
-    \EndFor
-\EndFor
-\State trip $\gets$ sequenze di punti consecutivi con la stessa etichetta di rotta \texttt{WP\_X - WP\_Y}
-\end{algorithmic}
-\end{revblock}
-\end{algorithm}
-
-\begin{algorithm}[htbp]
-\caption[Stima del modello di normalità di una rotta $R$.]{\rev{Stima del modello di normalità di una rotta {$R$}.}}\label{alg:app_model}
-\begin{revblock}
-\begin{algorithmic}[1]
-\Require punti e trip della rotta $R$, raggio dello stato $d = 500$~m, 11 lag
-\Ensure densità $p_j$, termini $L_i$, parametri $m$ e $\beta$
-\State $f_{\mathrm{geo}} \gets$ KDE su (\texttt{LON}, \texttt{LAT}) di tutti i punti di $R$
-\State $f_{v} \gets$ KDE su (\texttt{LON}, \texttt{LAT}) con pesi pari a \texttt{SOG}
-\ForAll{punto $j$ di $R$}
-    \State $p_j \gets f_{\mathrm{geo}}(x_j) \cdot f_{v}(x_j)$
-\EndFor
-\ForAll{punto $i$ di $R$}
-    \State $N_i \gets \{ j : \mathrm{GCD}(x_i, x_j) < d \}$, \quad $L_i \gets \sum_{j \in N_i} \log p_j$
-\EndFor
-\State $\tau_{\min} \gets \max(30~\mathrm{s}, D_{\min}/20)$, \quad $\tau_{\max} \gets \min(D_{\mathrm{med}}/5, 3.600~\mathrm{s})$
-\State $\tau_1, \dots, \tau_{11} \gets$ lag equidistanti tra $\tau_{\min}$ e $\tau_{\max}$
-\ForAll{trip di $R$ e punto $i$ del trip, escluso il primo}
-    \ForAll{lag $\tau_k$}
-        \State $j \gets$ punto del trip con timestamp più vicino a $t_i - \tau_k$
-        \If{$|(t_i - t_j) - \tau_k| \leq \mathrm{toll}(\tau_k) \cdot \tau_k$}
-            \State $\hat{x}_i \gets x_j + (V_{x,j}, V_{y,j}) \cdot (t_i - t_j)$, convertito in gradi
-            \State aggiungi $\Delta p = \mathrm{GCD}(\hat{x}_i, x_i)$ all'insieme $D_k$
-        \EndIf
-    \EndFor
-\EndFor
-\ForAll{lag $\tau_k$}
-    \State $(\alpha_k, \beta_k) \gets$ stima di massima verosimiglianza di una Weibull su $D_k$
-\EndFor
-\State $m \gets$ regressione ai minimi quadrati di $\alpha_k = m \cdot \tau_k$, \quad $\beta \gets$ media dei $\beta_k$
-\end{algorithmic}
-\end{revblock}
-\end{algorithm}
-
-\begin{algorithm}[htbp]
-\caption[Punteggio di normalità dei trip e classificazione.]{\rev{Punteggio di normalità dei trip e classificazione.}}\label{alg:app_score}
-\begin{revblock}
-\begin{algorithmic}[1]
-\Require trip della rotta $R$, termini $L_i$, parametri $m$ e $\beta$, probabilità a priori $P(R)$
-\Ensure punteggio di ogni trip, ranking e trip anomali
-\ForAll{trip $T = (x_1, \dots, x_n)$}
-    \State $O(T) \gets \frac{1}{n} \sum_{i=1}^{n} L_i$ \Comment{termine di osservazione}
-    \For{$t = 2, \dots, n$}
-        \State $\Delta t_t \gets t_t - t_{t-1}$, \quad $\hat{x}_t \gets x_{t-1} + (V_{x,t-1}, V_{y,t-1}) \cdot \Delta t_t$
-        \State $\Delta p_t \gets \mathrm{GCD}(\hat{x}_t, x_t)$
-    \EndFor
-    \State $Tr(T) \gets -\frac{1}{n-1} \sum_{t=2}^{n} {\left( \Delta p_t / (m \cdot \Delta t_t) \right)}^{\beta}$ \Comment{termine di transizione}
-    \State $S(T) \gets O(T) + Tr(T) + \log P(R)$
-\EndFor
-\State ordina i trip per $S(T)$ decrescente
-\State $s \gets Q_1 - 1{,}5 \cdot (Q_3 - Q_1)$, con $Q_1$ e $Q_3$ quartili dei punteggi
-\State \Return trip con $S(T) < s$ come anomali
-\end{algorithmic}
-\end{revblock}
-\end{algorithm}
-
-% ---------------------------------------------------------------------------------------------
-\chapter[Punteggi di tutti i trip]{\rev{Punteggi di tutti i trip}}\label{app:trips}
-
-\begin{revblock}
 La Tabella~\ref{tab:app_trips} riporta tutti i 184 trip della rotta \texttt{WP\_135 - WP\_118},
 ordinati per punteggio di normalità decrescente. Per ogni trip sono indicati la posizione nel
 ranking, il punteggio, la classe assegnata nell'etichettatura manuale e la decisione del metodo
 con la soglia di Tukey ($s = 1.035{,}48$). La linea orizzontale prima della posizione 176 separa
 i trip classificati come normali da quelli classificati come anomali.
-\end{revblock}
 
 {\small
-\renewcommand{\arraystretch}{0.8}\revrows
+\renewcommand{\arraystretch}{0.8}
 \begin{longtable}{rrrll}
 \caption[Punteggio di normalità, etichetta manuale e decisione del metodo per i 184 trip della
-rotta \texttt{WP\_135 - WP\_118}.]{\rev{Punteggio di normalità, etichetta manuale e decisione del metodo per i 184 trip della
-rotta \mbox{\texttt{WP\_135 - WP\_118}}.}}\label{tab:app_trips} \\
+rotta \texttt{WP\_135 - WP\_118}.]{Punteggio di normalità, etichetta manuale e decisione del metodo per i 184 trip della
+rotta \mbox{\texttt{WP\_135 - WP\_118}}.}\label{tab:app_trips} \\
 \toprule
 \textbf{Pos.} & \textbf{Trip} & \textbf{Punteggio} & \textbf{Etichetta} & \textbf{Decisione} \\
 \midrule
@@ -267,8 +146,7 @@ rotta \mbox{\texttt{WP\_135 - WP\_118}}.}}\label{tab:app_trips} \\
 \textbf{Pos.} & \textbf{Trip} & \textbf{Punteggio} & \textbf{Etichetta} & \textbf{Decisione} \\
 \midrule
 \endhead
-\midrule
-\multicolumn{5}{r}{\itshape continua nella pagina successiva} \\
+\bottomrule
 \endfoot
 \bottomrule
 \endlastfoot
