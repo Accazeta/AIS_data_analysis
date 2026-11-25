@@ -1,4 +1,27 @@
 % sections/frontmatter/abstract.tex
 \begin{abstract}
-    Riassunto di quanto svolto, da fare alla fine
+Il sistema di identificazione automatica (AIS) produce ogni giorno grandi quantità di dati sulla
+posizione e sul moto delle navi. Questi dati permettono di individuare in modo automatico i
+comportamenti anomali nel traffico marittimo. La tesi re-implementa in Python il framework TREAD
+di Pallotta et al.\ e lo applica ai messaggi AIS pubblicati dal NOAA per l'arcipelago delle Hawaii
+nel primo trimestre del 2019. L'obiettivo è verificare se un metodo sviluppato agli inizi degli
+anni 2010 sia ancora applicabile, con gli strumenti attuali, a un dataset reale di milioni di
+record.
+
+Il lavoro si sviluppa in tre fasi. Vengono prima puliti i dati e classificati gli stati delle navi, poi
+vengono estratti senza supervisione i waypoint e le rotte che li collegano per poi infine assegnare 
+a ogni trip (viaggio) di una rotta un punteggio di normalità costruito secondo i criteri stabiliti dall'algoritmo. 
+Per gestire circa 5,4 milioni di record senza hardware specializzato l'elaborazione
+avviene in modalità batch e i punti stazionari vengono aggregati prima del clustering.
+
+Il metodo estrae waypoint, tra cui i principali porti dell'arcipelago, e rotte coerenti con il traffico reale. 
+È stata poi scelta una rotta, in questo caso che collega il porto di Honolulu al porto di Kalaeloa, 
+dalla quale sono stati valutati 184 trip svoltisi nel periodo di analisi. I risultati dell'analisi
+sono stati confrontati con un'etichettatura manuale e da questo confronto sono state calcolate alcune metriche.
+Per questa rotta specifica, con la soglia scelta, non si verifica alcun falso positivo, ma viene rilevato solo un quinto circa delle anomalie.
+Le prestazioni migliorano se si considerano solo le anomalie di tipo route deviation, ossia la tipologia
+di anomalie per cui questo metodo è stato pensato. In questo caso ne viene rilevata circa metà.
+Il limite principale riguarda le zone portuali, dove l'addensamento dei punti agisce sul punteggio di normalità.
+
+La tesi propone infine alcuni sviluppi, tra cui modelli separati per le zone portuali e una versione del metodo non più a batch.
 \end{abstract}
